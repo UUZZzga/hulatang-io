@@ -1,10 +1,12 @@
 local sources = {
+    "Exception.cpp",
     "Log.cpp",
 }
 
 target("hulatang_base")
     set_kind("static")
     add_packages("fmt", "spdlog", {public = true})
+    add_packages("backward-cpp")
     add_deps("config")
 
     set_options("disable_logging")

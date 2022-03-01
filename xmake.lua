@@ -12,6 +12,7 @@ option_end()
 -- 拉取远程依赖
 add_requires("gtest 1.11.0")
 add_requires("spdlog 1.9.2", {system = false, configs = {fmt_external = true}})
+add_requires("backward-cpp v1.6") -- 堆栈跟踪
 
 set_warnings("all")
 
@@ -57,7 +58,7 @@ end
 
 --系统库
 if is_host("windows") then
-    add_syslinks("Ws2_32","Shell32")
+    add_syslinks("Ws2_32", "Shell32", "PSAPI", "DbgHelp")
 elseif is_host("linux") then
     add_syslinks("pthread")
 end
