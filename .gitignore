@@ -1,0 +1,19 @@
+build/
+
+### xmake ###
+.xmake/
+### xmake build vs2019 ###
+vs2019/
+
+### VS Code ###
+.vscode/
+# vscode plugin
+.VSCodeCounter/
+
+### cache ###
+.cache/
+
+### clangd ###
+.clangd/
+
+compile_commands.json
