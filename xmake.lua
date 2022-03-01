@@ -2,8 +2,16 @@ add_rules("mode.debug", "mode.release")
 
 set_languages("c++20")
 
+-- 关闭打印所有日志
+option("disable_logging")
+    set_default(false)
+    set_showmenu(true)
+    add_defines("DISABLE_LOGGING")
+option_end()
+
 -- 拉取远程依赖
-add_requires("gtest")
+add_requires("gtest 1.11.0")
+add_requires("spdlog 1.9.2", {system = false, configs = {fmt_external = true}})
 
 set_warnings("all")
 
@@ -81,7 +89,4 @@ target("config")
         target:add("headerfiles", "$(buildir)/config.h")
     end)
 
-target("config")
-    set_kind("shared")
-
-    add_files("hulatang/io/*.cpp")
+includes("hulatang/base")
