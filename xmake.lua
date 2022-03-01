@@ -82,11 +82,9 @@ target("config")
     configvar_check_cfuncs("HAVE_EPOLL_CREATE1", 'epoll_create1',{includes = {"sys/epoll.h"}})
     configvar_check_cfuncs("HAVE_EPOLL_CREATE", 'epoll_create',{includes = {"sys/epoll.h"}})
 
-    add_configfiles("hulatang/base/Config.h.in")
+    set_configdir("$(buildir)/config")
+    add_includedirs("$(buildir)/config", {public = true})
 
-    after_build(function (target)
-        -- 默认生成目录为 $(buildir)/config.h
-        target:add("headerfiles", "$(buildir)/config.h")
-    end)
+    add_configfiles("hulatang/base/Config.h.in")
 
 includes("hulatang/base")
