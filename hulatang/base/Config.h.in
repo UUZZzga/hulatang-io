@@ -1,0 +1,36 @@
+#ifndef HULATANG_BASE_CONFIG_H
+#define HULATANG_BASE_CONFIG_H
+
+#ifndef HAVE_FWRITE_UNLOCKED
+$
+{
+    define HAVE_FWRITE_UNLOCKED
+}
+#endif
+
+#ifndef HAVE__FWRITE_NOLOCK
+$
+{
+    define HAVE__FWRITE_NOLOCK
+}
+#endif
+#ifndef HAVE_VECTOR_CONSTEXPR
+$
+{
+    define HAVE_VECTOR_CONSTEXPR
+}
+#endif
+#ifndef HAVE_EPOLL_CREATE1
+$
+{
+    define HAVE_EPOLL_CREATE1
+}
+#endif
+#ifndef HAVE_EPOLL_CREATE
+$
+{
+    define HAVE_EPOLL_CREATE
+}
+#endif
+
+#endif // HULATANG_BASE_CONFIG_H
