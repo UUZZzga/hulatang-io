@@ -5,6 +5,7 @@ local sources = {
 target("hulatang_base")
     set_kind("static")
     add_packages("fmt", "spdlog", {public = true})
+    add_deps("config")
 
     set_options("disable_logging")
     for _, src in ipairs(sources) do
