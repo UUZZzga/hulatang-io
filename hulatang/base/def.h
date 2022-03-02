@@ -21,10 +21,17 @@
 #    error "HLT_COMPILER_* is not defined!"
 #endif //
 
-#ifdef _MSC_VER
+#if HLT_COMPILER_MSVC
 #    define HLT_NOINLINE __declspec(noinline)
-#else // ^^^ _MSC_VER ^^^ | vvv !_MSC_VER vvv
+#else // ^^^ HLT_COMPILER_MSVC ^^^ | vvv !HLT_COMPILER_MSVC vvv
 #    define HLT_NOINLINE __attribute__((noinline))
-#endif //  !_MSC_VER
+#endif //  !HLT_COMPILER_MSVC
+
+// function definition macros
+#if HLT_COMPILER_MSVC
+#    define HLT_FUNC_DEF __FUNCSIG__
+#else
+#    define HLT_FUNC_DEF __PRETTY_FUNCTION__
+#endif
 
 #endif // HULATANG_BASE_DEF_H

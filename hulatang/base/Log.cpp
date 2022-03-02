@@ -9,7 +9,7 @@ std::shared_ptr<spdlog::logger> Log::ClientLogger;
 
 void Log::init()
 {
-    spdlog::set_pattern("%^[%T] %n: %v%$");
+    spdlog::set_pattern("%^[%T.%e]-%t-%l %n: %v%$");
     CoreLogger = spdlog::stdout_color_mt("HULATANG");
     CoreLogger->set_level(spdlog::level::trace);
     ClientLogger = spdlog::stdout_color_mt("APP");

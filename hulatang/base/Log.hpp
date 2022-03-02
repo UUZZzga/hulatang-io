@@ -1,6 +1,8 @@
 #ifndef HULATANG_BASE_LOG_HPP
 #define HULATANG_BASE_LOG_HPP
 
+#include "hulatang/base/def.h"
+
 #include <spdlog/spdlog.h>
 
 namespace hulatang::base {
@@ -57,5 +59,8 @@ private:
 #    define HLT_ERROR(...)
 #    define HLT_FATAL(...)
 #endif // !DISABLE_LOGGING
+
+#define DLOG_TRACE HLT_TRACE("{0} this={1:x}", HLT_FUNC_DEF, reinterpret_cast<uintptr_t>(this))
+#define DLOG_TRACE_ARG(...) HLT_TRACE("{0} this={1:x} {2}", HLT_FUNC_DEF, reinterpret_cast<uintptr_t>(this), fmt::format(__VA_ARGS__))
 
 #endif // HULATANG_BASE_LOG_HPP
