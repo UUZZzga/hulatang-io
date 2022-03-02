@@ -3,7 +3,7 @@
 
 #include "hulatang/io/EventWatcher.hpp"
 namespace hulatang::io {
-class TimerEventWatcher : public EventWatcher
+class TimerEventWatcher : public ClosableEventWatcher
 {};
 } // namespace hulatang::io
 

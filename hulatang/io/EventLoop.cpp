@@ -1,7 +1,7 @@
 #include "hulatang/io/EventLoop.hpp"
 #include "hulatang/io/Status.hpp"
 
-#include "hulatang/base/log.hpp"
+#include "hulatang/base/Log.hpp"
 #include "hulatang/base/String.hpp"
 
 #include <chrono>
@@ -31,7 +31,8 @@ void EventLoop::run()
     status.store(EnumEventLoopStatus::Starting);
 
     status.store(EnumEventLoopStatus::Running);
-    while (status == EnumEventLoopStatus::Running) {
+    while (status == EnumEventLoopStatus::Running)
+    {
         runOnce();
     }
     freeNotifyPipeWatcher();
@@ -42,6 +43,23 @@ void EventLoop::run()
 void EventLoop::stop()
 {
     DLOG_TRACE;
+}
+
+void EventLoop::queueInLoop(const std::function<void()> &f)
+{
+    cycleEventManager.createEvent(f);
+}
+
+void EventLoop::runInLoop(const std::function<void()> &f)
+{
+    if (isInLoopThread())
+    {
+        f();
+    }
+    else
+    {
+        queueInLoop(f);
+    }
 }
 
 void EventLoop::init()
@@ -126,7 +144,8 @@ bool EventLoop::isIdle() const noexcept
     return timerEventManager.isIdle() && cycleEventManager.isIdle();
 }
 
-void EventLoop::processIo(microseconds blockTime) {
+void EventLoop::processIo(microseconds blockTime)
+{
     fdEventManager.process(blockTime);
 }
 

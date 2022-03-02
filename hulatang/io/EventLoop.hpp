@@ -7,6 +7,7 @@
 #include "hulatang/io/TimerEventManager.hpp"
 #include "hulatang/io/FdEventManager.hpp"
 
+#include <functional>
 #include <thread>
 #include <cassert>
 #include <chrono>
@@ -23,6 +24,9 @@ public:
     void run();
 
     void stop();
+
+    void runInLoop(const std::function<void()>& f);
+    void queueInLoop(const std::function<void()>& f);
 
 public:
     bool isInLoopThread() const noexcept

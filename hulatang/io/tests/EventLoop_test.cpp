@@ -1,4 +1,4 @@
-#include "hulatang/base/log.hpp"
+#include "hulatang/base/Log.hpp"
 #include "hulatang/io/EventLoop.hpp"
 
 using hulatang::base::Log;
@@ -8,6 +8,9 @@ int main(int _argc, const char **_argv)
 {
     Log::init();
     EventLoop loop;
+    loop.queueInLoop([]{
+        HLT_INFO("OK");
+    });
     loop.run();
     return 0;
 }

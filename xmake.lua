@@ -13,6 +13,7 @@ option_end()
 add_requires("gtest 1.11.0")
 add_requires("spdlog 1.9.2", {system = false, configs = {fmt_external = true}})
 add_requires("backward-cpp v1.6") -- 堆栈跟踪
+add_requires("concurrentqueue")
 
 set_warnings("all")
 
