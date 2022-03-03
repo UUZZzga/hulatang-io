@@ -5,6 +5,7 @@ local sources = {
     "EventWatcher.cpp",
     "FdEventManager.cpp",
     "IdleEventManager.cpp",
+    "IdleEventWatcher.cpp",
     "InvokeTimer.cpp",
     "TimerEventManager.cpp",
     "TimerEventWatcher.cpp",
