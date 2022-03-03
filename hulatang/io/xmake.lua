@@ -5,7 +5,9 @@ local sources = {
     "EventWatcher.cpp",
     "FdEventManager.cpp",
     "IdleEventManager.cpp",
+    "InvokeTimer.cpp",
     "TimerEventManager.cpp",
+    "TimerEventWatcher.cpp",
 }
 
 target("hulatang_io")

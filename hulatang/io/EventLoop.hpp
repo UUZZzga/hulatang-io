@@ -7,7 +7,11 @@
 #include "hulatang/io/TimerEventManager.hpp"
 #include "hulatang/io/FdEventManager.hpp"
 
+#include "hulatang/io/InvokeTimer.hpp"
+
 #include <functional>
+#include <ratio>
+#include <stdint.h>
 #include <thread>
 #include <cassert>
 #include <chrono>
@@ -16,7 +20,7 @@ namespace hulatang::io {
 class EventLoop
 {
 public:
-    typedef std::chrono::microseconds microseconds;
+    using microseconds = std::chrono::microseconds;
 
 public:
     EventLoop();
@@ -25,8 +29,11 @@ public:
 
     void stop();
 
-    void runInLoop(const std::function<void()>& f);
-    void queueInLoop(const std::function<void()>& f);
+    void runInLoop(const std::function<void()> &f);
+    void queueInLoop(const std::function<void()> &f);
+
+    InvokeTimerPtr runAfter(microseconds time, const std::function<void()> &f);
+    InvokeTimerPtr runEvery(microseconds interval, const std::function<void()> &f, uint32_t repeat = RepeatTimerEventWatcher::Infinite);
 
 public:
     bool isInLoopThread() const noexcept
@@ -37,6 +44,16 @@ public:
     void assertInLoopThread() const noexcept
     {
         assert(isInLoopThread());
+    }
+
+    microseconds getCurrentTime() const
+    {
+        return currentTime;
+    }
+
+    TimerEventManager &getTimerEventManager()
+    {
+        return timerEventManager;
     }
 
 private:
@@ -55,6 +72,8 @@ private:
     void processTimerAndTimeout();
     void processIdle();
     void processCycle();
+
+    void wakeup();
 
 private:
     microseconds currentTime;

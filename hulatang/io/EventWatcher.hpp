@@ -35,16 +35,25 @@ class ClosableEventWatcher : public EventWatcher
 public:
     typedef std::function<void()> EventHandler;
 
-    virtual ~ClosableEventWatcher();
+    ClosableEventWatcher(EventLoop *_loop)
+        : loop(_loop)
+    {}
 
     void cancel();
 
-    virtual void DoClose() {}
+    void setCancelCallback(const EventHandler &cancelCallback_)
+    {
+        cancelCallback = cancelCallback_;
+    }
+
+protected:
+    virtual void doClose() {}
+
+    virtual void doCancel() {}
 
 protected:
     EventLoop *loop;
     EventHandler cancelCallback;
-    bool attached;
 };
 } // namespace hulatang::io
 

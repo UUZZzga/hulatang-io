@@ -1,4 +1,5 @@
 #include "hulatang/io/EventLoop.hpp"
+#include "hulatang/io/InvokeTimer.hpp"
 #include "hulatang/io/Status.hpp"
 
 #include "hulatang/base/Log.hpp"
@@ -7,7 +8,7 @@
 #include <chrono>
 #include <thread>
 
-using std::chrono::microseconds;
+using microseconds = hulatang::io::EventLoop::microseconds;
 using std::chrono::operator""ms;
 using std::chrono::operator""us;
 
@@ -20,6 +21,8 @@ thread_local hulatang::io::EventLoop *thisEventLoop = nullptr;
 namespace hulatang::io {
 using status::EnumEventLoopStatus;
 EventLoop::EventLoop()
+    : currentTime(0)
+    , timerEventManager(this)
 {
     init();
 }
@@ -43,11 +46,25 @@ void EventLoop::run()
 void EventLoop::stop()
 {
     DLOG_TRACE;
+    status.store(EnumEventLoopStatus::Stopping);
+    wakeup();
 }
 
 void EventLoop::queueInLoop(const std::function<void()> &f)
 {
     cycleEventManager.createEvent(f);
+}
+
+InvokeTimerPtr EventLoop::runAfter(microseconds time, const std::function<void()> &f)
+{
+    auto watcher = TimerEventWatcher::create(this, time + currentTime, f);
+    return InvokeTimer::create(this, watcher);
+}
+
+InvokeTimerPtr EventLoop::runEvery(microseconds interval, const std::function<void()> &f, uint32_t repeat)
+{
+    auto watcher = RepeatTimerEventWatcher::create(this, interval, repeat, f);
+    return InvokeTimer::create(this, watcher);
 }
 
 void EventLoop::runInLoop(const std::function<void()> &f)
@@ -94,6 +111,7 @@ microseconds EventLoop::calculationBlocktime() noexcept
     {
         timerEventManager.process();
         updateTime();
+        next_timeout = timerEventManager.nextTriggerTime();
     }
     if (!cycleEventManager.isIdle())
     {
@@ -103,7 +121,6 @@ microseconds EventLoop::calculationBlocktime() noexcept
     {
         return MaximumBlockingTime;
     }
-    next_timeout = timerEventManager.nextTriggerTime();
     if (next_timeout < 1ms)
     {
         next_timeout = 1ms;
@@ -113,6 +130,7 @@ microseconds EventLoop::calculationBlocktime() noexcept
 
 void EventLoop::runOnce()
 {
+    DLOG_TRACE;
     updateTime();
     microseconds blocktime = calculationBlocktime();
     processIo(blocktime);
@@ -134,7 +152,6 @@ void EventLoop::runOnce()
 void EventLoop::updateTime()
 {
     using std::chrono::duration_cast;
-    using std::chrono::microseconds;
     using std::chrono::system_clock;
     currentTime = duration_cast<microseconds>(system_clock::now().time_since_epoch());
 }
@@ -146,22 +163,31 @@ bool EventLoop::isIdle() const noexcept
 
 void EventLoop::processIo(microseconds blockTime)
 {
+    DLOG_TRACE;
     fdEventManager.process(blockTime);
 }
 
 void EventLoop::processTimerAndTimeout()
 {
+    DLOG_TRACE;
     timerEventManager.process();
 }
 
 void EventLoop::processIdle()
 {
+    DLOG_TRACE;
     idleEventManager.process();
 }
 
 void EventLoop::processCycle()
 {
+    DLOG_TRACE;
     cycleEventManager.process();
+}
+
+void EventLoop::wakeup()
+{
+    // TODO
 }
 
 } // namespace hulatang::io
