@@ -13,5 +13,8 @@ target("hulatang_base")
     for _, src in ipairs(sources) do
         add_files(src)
     end
+    if is_host("windows") then
+        add_files("platform/win32/File.cpp")
+    end
 
 includes("tests")

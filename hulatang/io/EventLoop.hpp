@@ -56,6 +56,10 @@ public:
         return timerEventManager;
     }
 
+    void updateTime();
+
+    FdEventManager& getFdEventManager() { return fdEventManager; }
+
 private:
     void init();
     void initNotifyPipeWatcher();
@@ -64,7 +68,6 @@ private:
     microseconds calculationBlocktime() noexcept;
 
     void runOnce();
-    void updateTime();
 
     bool isIdle() const noexcept;
 

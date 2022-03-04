@@ -1,4 +1,5 @@
 local sources = {
+    "Channel.cpp",
     "CycleEventManager.cpp",
     "CycleEventWatcher.cpp",
     "EventLoop.cpp",
@@ -7,6 +8,7 @@ local sources = {
     "IdleEventManager.cpp",
     "IdleEventWatcher.cpp",
     "InvokeTimer.cpp",
+    "SocketChannel.cpp",
     "TimerEventManager.cpp",
     "TimerEventWatcher.cpp",
 }
@@ -19,6 +21,9 @@ target("hulatang_io")
     set_options("disable_logging")
     for _, src in ipairs(sources) do
         add_files(src)
+    end
+    if is_host("windows") then
+        add_files("async/IOCPFdEventManager.cpp")
     end
 
 includes("tests")
