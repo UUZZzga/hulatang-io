@@ -82,7 +82,7 @@ private:
     DefaultCallback connectionCallback;
     MessageCallback messageCallback;
 
-    std::shared_ptr<FdEventWatcher> watcher;
+    std::weak_ptr<FdEventWatcher> watcher;
     std::atomic<StateE> state;
     size_t triggerByteNum;
 

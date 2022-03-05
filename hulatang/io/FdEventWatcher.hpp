@@ -13,8 +13,8 @@ using FdEventWatcherPtr = std::shared_ptr<FdEventWatcher>;
 class FdEventWatcher : public ClosableEventWatcher
 {
 public:
-    using WriteEventHandler = std::function<void(base::Buf &)>;
-    using ReadEventHandler = std::function<void(base::Buf &)>;
+    using WriteEventHandler = std::function<void(size_t)>;
+    using ReadEventHandler = std::function<void(size_t)>;
     using ErrorEventHandler = std::function<void(std::error_condition &)>;
 
     void setReadHandler(const ReadEventHandler &readHandler_)
@@ -22,6 +22,10 @@ public:
         readHandler = readHandler_;
     }
 
+    WriteEventHandler getWriteHandler() const
+    {
+        return writeHandler;
+    }
     void setWriteHandler(const WriteEventHandler &writeHandler_)
     {
         writeHandler = writeHandler_;
@@ -32,10 +36,37 @@ public:
         errorHandler = errorHandler_;
     }
 
+    void setCloseHandler(const EventHandler &closeHandler_)
+    {
+        closeHandler = closeHandler_;
+    }
+
+    void readHandle(size_t num)
+    {
+        readHandler(num);
+    }
+
+    void writeHandle(size_t num)
+    {
+        writeHandler(num);
+    }
+
+    void openHandle()
+    {
+        openHandler();
+    }
+
+    void closeHandle()
+    {
+        closeHandler();
+    }
+
 private:
     ReadEventHandler readHandler;
     WriteEventHandler writeHandler;
     ErrorEventHandler errorHandler;
+    EventHandler openHandler;
+    EventHandler closeHandler;
 };
 } // namespace hulatang::io
 

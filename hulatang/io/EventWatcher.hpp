@@ -9,7 +9,7 @@ class EventLoop;
 class EventWatcher
 {
 public:
-    typedef std::function<void()> EventHandler;
+    using EventHandler = std::function<void()>;
 
     virtual ~EventWatcher() = default;
 

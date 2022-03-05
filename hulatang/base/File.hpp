@@ -21,6 +21,8 @@ public:
     FileDescriptor();
     ~FileDescriptor() noexcept;
 
+    [[nodiscard]] uintptr_t getFd() const noexcept;
+
     // open file
     void open(std::string_view path, OFlag oflag);
 
@@ -30,9 +32,9 @@ public:
     // connect to remote
     void connect(std::string_view peerHost, int peerPort) noexcept;
 
-    void read(const Buf &buf, std::error_condition &ec) noexcept;
+    void read(const Buf &buf, std::error_condition &condition) noexcept;
 
-    void write(const Buf &buf, std::error_condition &ec) noexcept;
+    void write(const Buf &buf, std::error_condition &condition) noexcept;
 
     void close() noexcept;
 

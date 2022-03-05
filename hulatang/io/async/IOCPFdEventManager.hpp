@@ -3,7 +3,7 @@
 
 #include "hulatang/io/FdEventManager.hpp"
 
-#include <Windows.h>
+#include "hulatang/base/platform/win32/Type.hpp"
 
 namespace hulatang::io {
 class IOCPFdEventManager : public FdEventManager
@@ -13,6 +13,9 @@ public:
     ~IOCPFdEventManager();
 
     void process(microseconds blockTime) override;
+
+    void add(const FdEventWatcherPtr &watcher, const base::FileDescriptor& descriptor) override;
+    void cancel(const FdEventWatcherPtr &watcher) override;
 
 private:
     HANDLE iocpHandle;

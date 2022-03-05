@@ -1,6 +1,7 @@
 #ifndef HULATANG_IO_FDEVENTMANAGER_HPP
 #define HULATANG_IO_FDEVENTMANAGER_HPP
 
+#include "hulatang/base/File.hpp"
 #include "hulatang/io/FdEventWatcher.hpp"
 #include <chrono>
 #include <vector>
@@ -14,8 +15,8 @@ public:
     using microseconds = std::chrono::microseconds;
     virtual void process(microseconds blockTime);
 
-    void add(const FdEventWatcherPtr &watcher);
-    void cancel(const FdEventWatcherPtr &watcher);
+    virtual void add(const FdEventWatcherPtr &watcher, const base::FileDescriptor& fd);
+    virtual void cancel(const FdEventWatcherPtr &watcher);
 
 protected:
     EventLoop *loop;

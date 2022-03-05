@@ -9,6 +9,7 @@ local sources = {
     "IdleEventWatcher.cpp",
     "InvokeTimer.cpp",
     "SocketChannel.cpp",
+    "TCPConnection.cpp",
     "TimerEventManager.cpp",
     "TimerEventWatcher.cpp",
 }

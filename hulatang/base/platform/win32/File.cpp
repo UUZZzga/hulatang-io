@@ -1,5 +1,7 @@
 #include "hulatang/base/File.hpp"
 
+#include "hulatang/base/platform/win32/Type.hpp"
+
 #include "hulatang/base/Log.hpp"
 #include "hulatang/base/error/ErrorCode.hpp"
 #include "hulatang/base/extend/Defer.hpp"
@@ -7,11 +9,6 @@
 #include <system_error>
 #include <variant>
 #include <cassert>
-
-#include <winsock2.h>
-#include <ws2tcpip.h>
-
-#include <Mswsock.h>
 
 using hulatang::make_win32_error_code;
 
@@ -21,18 +18,13 @@ using hulatang::base::O_READ;
 using hulatang::base::O_WRITE;
 using hulatang::base::OFlag;
 
-namespace impl {
-using fd_t = uintptr_t;
-const fd_t FdNull = static_cast<fd_t>(-1);
-
 constexpr uintptr_t socketFlag = 1ULL << 63;
 
-union sockaddr_u
-{
-    sockaddr sa;
-    sockaddr_in sin;
-    sockaddr_in6 sin6;
-};
+namespace impl {
+using hulatang::base::fd_t;
+using hulatang::base::FdNull;
+using hulatang::base::IO_DATA;
+using hulatang::base::sockaddr_u;
 
 sockaddr_u getSockaddr(std::string_view host, int port, std::error_code &ec)
 {
@@ -170,15 +162,6 @@ fd_t bind(std::string_view localHost, int localPort, std::error_code &ec) noexce
         return FdNull;
     };
 
-    LPFN_CONNECTEX ConnectEx = nullptr;
-    DWORD dwBytes = 0;
-    GUID guidConnectEx = WSAID_CONNECTEX;
-    if (SOCKET_ERROR == WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &guidConnectEx, sizeof(guidConnectEx), &ConnectEx,
-                            sizeof(ConnectEx), &dwBytes, nullptr, nullptr))
-    {
-        return error();
-    }
-
     if (SOCKET_ERROR == bind(fd, &localAddr.sa, addrSize))
     {
         int err = WSAGetLastError();
@@ -191,7 +174,7 @@ fd_t bind(std::string_view localHost, int localPort, std::error_code &ec) noexce
     return fd | socketFlag;
 }
 
-void connect(fd_t fd, std::string_view peerHost, int peerPort, OVERLAPPED *overlapped, std::error_code &ec) noexcept
+void connect(fd_t fd, std::string_view peerHost, int peerPort, IO_DATA &data, std::error_code &ec) noexcept
 {
     assert(INVALID_SOCKET != fd);
 
@@ -200,29 +183,36 @@ void connect(fd_t fd, std::string_view peerHost, int peerPort, OVERLAPPED *overl
     sockaddr_u peerAddr = getSockaddr(peerHost, peerPort, ec);
 
     LPFN_CONNECTEX ConnectEx = nullptr;
+    DWORD dwBytes = 0;
+    GUID guidConnectEx = WSAID_CONNECTEX;
+    if (SOCKET_ERROR == WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &guidConnectEx, sizeof(guidConnectEx), &ConnectEx,
+                            sizeof(ConnectEx), &dwBytes, nullptr, nullptr))
+    {
+        ec = make_win32_error_code(WSAGetLastError());
+    }
 
-    if (ConnectEx(fd, &peerAddr.sa, addrSize, nullptr, 0, nullptr, overlapped) == FALSE)
+    if (ConnectEx(fd, &peerAddr.sa, addrSize, nullptr, 0, nullptr, &data.overlapped) == FALSE)
     {
         ec = make_win32_error_code(WSAGetLastError());
     }
 }
 
-void read(fd_t fd, const Buf &buf, OVERLAPPED *overlapped, std::error_code &ec) noexcept
+void read(fd_t fd, const Buf &buf, IO_DATA &data, std::error_code &ec) noexcept
 {
     WSABUF wsabuf{.len = static_cast<ULONG>(buf.len), .buf = buf.buf};
     DWORD flags = 0;
-    if (SOCKET_ERROR == WSARecv(fd, &wsabuf, 1, nullptr, &flags, overlapped, nullptr))
+    if (SOCKET_ERROR == WSARecv(fd, &wsabuf, 1, nullptr, &flags, &data.overlapped, nullptr))
     {
         ec = make_win32_error_code(WSAGetLastError());
     }
 }
 
-void write(fd_t fd, const Buf &buf, OVERLAPPED *overlapped, std::error_code &ec) noexcept
+void write(fd_t fd, const Buf &buf, IO_DATA &data, std::error_code &ec) noexcept
 {
     WSABUF wsabuf{.len = static_cast<ULONG>(buf.len), .buf = buf.buf};
     DWORD flags = 0;
 
-    if (SOCKET_ERROR == WSASend(fd, &wsabuf, 1, nullptr, flags, overlapped, nullptr))
+    if (SOCKET_ERROR == WSASend(fd, &wsabuf, 1, nullptr, flags, &data.overlapped, nullptr))
     {
         ec = make_win32_error_code(WSAGetLastError());
     }
@@ -242,16 +232,15 @@ void close(fd_t fd) noexcept
 } // namespace impl
 
 namespace hulatang::base {
-struct FileDescriptor::Impl
-{
-    OVERLAPPED recvOverlapped;
-    OVERLAPPED sendOverlapped;
-    impl::fd_t fd;
-};
-
 FileDescriptor::FileDescriptor() = default;
 
 FileDescriptor::~FileDescriptor() noexcept = default;
+
+uintptr_t FileDescriptor::getFd() const noexcept
+{
+    assert(!impl);
+    return impl->fd;
+}
 
 void FileDescriptor::open(std::string_view path, OFlag oflag)
 {
@@ -284,7 +273,7 @@ void FileDescriptor::connect(std::string_view peerHost, int peerPort) noexcept
     assert(impl);
 
     std::error_code ec;
-    impl::connect(impl->fd, peerHost, peerPort, &impl->recvOverlapped, ec);
+    impl::connect(impl->fd, peerHost, peerPort, impl->recvData, ec);
     if (!ec)
     {
         return;
@@ -300,8 +289,10 @@ void FileDescriptor::connect(std::string_view peerHost, int peerPort) noexcept
 
 void FileDescriptor::read(const Buf &buf, std::error_condition &condition) noexcept
 {
+    assert(impl);
+
     std::error_code ec;
-    impl::read(impl->fd, buf, &impl->recvOverlapped, ec);
+    impl::read(impl->fd, buf, impl->recvData, ec);
     if (ec.category() == win32_category() && ERROR_IO_PENDING == ec.value())
     {
         return;
@@ -311,8 +302,9 @@ void FileDescriptor::read(const Buf &buf, std::error_condition &condition) noexc
 
 void FileDescriptor::write(const Buf &buf, std::error_condition &condition) noexcept
 {
+    assert(impl);
     std::error_code ec;
-    impl::write(impl->fd, buf, &impl->sendOverlapped, ec);
+    impl::write(impl->fd, buf, impl->sendData, ec);
     if (ec.category() == win32_category() && ERROR_IO_PENDING == ec.value())
     {
         return;
@@ -322,6 +314,7 @@ void FileDescriptor::write(const Buf &buf, std::error_condition &condition) noex
 
 void FileDescriptor::close() noexcept
 {
+    assert(impl);
     impl::close(impl->fd);
 }
 

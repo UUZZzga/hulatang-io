@@ -113,7 +113,12 @@ void SocketChannel::forceCloseInLoop()
     // EventLoop 队列里存在事件但还没执行 forceCloseInLoop 被自己线程 再次执行
     if (state == kDisconnecting)
     {
-        loop->getFdEventManager().cancel(watcher);
+        auto ptr = watcher.lock();
+        if (!ptr)
+        {
+            return;
+        }
+        loop->getFdEventManager().cancel(ptr);
         fd.close();
         state = kDisconnected;
         if (connectionCallback)
