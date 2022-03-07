@@ -38,7 +38,8 @@ public:
 
     void enableReading()
     {
-        int old = flags; flags |= kReadEvent;
+        int old = flags;
+        flags |= kReadEvent;
         update(old);
     }
     void disableReading()
@@ -81,14 +82,14 @@ public:
 public:
     void setCloseCallback(const DefaultCallback &closeCallback);
 
-    [[nodiscard]] const base::FileDescriptor &getFd() const
+    [[nodiscard]] base::FileDescriptor &getFd()
     {
         return fd;
     }
 
 protected:
     EventLoop *loop;
-    base::FileDescriptor& fd;
+    base::FileDescriptor &fd;
     DefaultCallback closeCallback;
 #if _WIN32
     static constexpr size_t bufferSize = 4096;

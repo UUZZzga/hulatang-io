@@ -205,6 +205,7 @@ void connect(fd_t fd, std::string_view peerHost, int peerPort, IO_DATA &data, st
     {
         ec = make_win32_error_code(WSAGetLastError());
     }
+    data.operationType = hulatang::base::Type::OPEN;
 }
 
 void read(fd_t fd, const Buf &buf, IO_DATA &data, std::error_code &ec) noexcept
@@ -221,18 +222,25 @@ void read(fd_t fd, const Buf &buf, IO_DATA &data, std::error_code &ec) noexcept
             ec = make_win32_error_code(WSAGetLastError());
         }
     }
+    data.operationType = hulatang::base::Type::READ;
 }
 
 void write(fd_t fd, const Buf &buf, IO_DATA &data, std::error_code &ec) noexcept
 {
-    WSABUF wsabuf{.len = static_cast<ULONG>(buf.len), .buf = buf.buf};
-    DWORD flags = 0;
-    data.buf = buf.buf;
-
-    if (SOCKET_ERROR == WSASend((fd & socketFlag), &wsabuf, 1, nullptr, flags, &data.overlapped, nullptr))
+    if ((fd & socketFlag) != 0U)
     {
-        ec = make_win32_error_code(WSAGetLastError());
+        fd = fd & (~socketFlag);
+
+        WSABUF wsabuf{.len = static_cast<ULONG>(buf.len), .buf = buf.buf};
+        DWORD flags = 0;
+        data.buf = buf.buf;
+
+        if (SOCKET_ERROR == WSASend(fd, &wsabuf, 1, nullptr, flags, &data.overlapped, nullptr))
+        {
+            ec = make_win32_error_code(WSAGetLastError());
+        }
     }
+    data.operationType = hulatang::base::Type::WRITE;
 }
 
 void close(fd_t fd) noexcept
@@ -299,7 +307,6 @@ void FileDescriptor::connect(std::string_view peerHost, int peerPort, std::error
     // 处理错误
     if (ec.category() == win32_category() && ERROR_IO_PENDING == ec.value())
     {
-        impl->recvData.operationType = Type::OPEN;
         condition = make_file_error_condition(FileErrorCode::CONNECTING);
         return;
     }
@@ -312,9 +319,12 @@ void FileDescriptor::read(const Buf &buf, std::error_condition &condition) noexc
 
     std::error_code ec;
     impl::read(impl->fd, buf, impl->recvData, ec);
+    if (!ec)
+    {
+        return;
+    }
     if (ec.category() == win32_category() && ERROR_IO_PENDING == ec.value())
     {
-        impl->recvData.operationType = Type::READ;
         return;
     }
     HLT_CORE_WARN("error code: {}, message: {}", ec.value(), ec.message());
@@ -325,9 +335,12 @@ void FileDescriptor::write(const Buf &buf, std::error_condition &condition) noex
     assert(impl);
     std::error_code ec;
     impl::write(impl->fd, buf, impl->sendData, ec);
+    if (!ec)
+    {
+        return;
+    }
     if (ec.category() == win32_category() && ERROR_IO_PENDING == ec.value())
     {
-        impl->recvData.operationType = Type::WRITE;
         return;
     }
     HLT_CORE_WARN("error code: {}, message: {}", ec.value(), ec.message());

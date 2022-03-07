@@ -1,6 +1,7 @@
 #include "hulatang/base/Log.hpp"
 #include "hulatang/io/EventLoop.hpp"
 #include "hulatang/io/TCPClient.hpp"
+#include "hulatang/io/TCPConnection.hpp"
 #include <chrono>
 #include <winsock2.h>
 
@@ -18,7 +19,11 @@ int main(int _argc, const char **_argv)
     TCPClient client(&loop, "localhost", 8080);
 
     client.setConnectionCallback([](const auto &conn) { HLT_INFO("ConnectionCallback"); });
-    client.setMessageCallback([](const auto &conn, const auto &buf) { HLT_INFO("{}", std::string_view(buf.buf, buf.len)); });
+    client.setMessageCallback([](const auto &conn, const auto &buf) -> void {
+        HLT_INFO("{}", std::string_view(buf.buf, buf.len));
+        conn->send(buf);
+        conn->getLoop()->stop();
+    });
 
     loop.queueInLoop([&] { client.connect(); });
     loop.run();

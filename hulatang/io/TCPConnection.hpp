@@ -4,6 +4,7 @@
 #include "hulatang/base/Buf.hpp"
 #include "hulatang/io/SocketChannel.hpp"
 
+#include <atomic>
 #include <memory>
 
 namespace hulatang::io {
@@ -59,6 +60,7 @@ private:
     ConnectionCallback connectionCallback;
     MessageCallback messageCallback;
     CloseCallback closeCallback;
+    std::atomic_int32_t sending;
 };
 } // namespace hulatang::io
 

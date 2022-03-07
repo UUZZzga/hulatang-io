@@ -100,6 +100,7 @@ void IOCPFdEventManager::process(microseconds blockTime)
         case WRITE: {
             watcher->writeHandle(bytes);
         }
+        break;
         default: {
             HLT_CORE_ERROR("未知错误");
         }

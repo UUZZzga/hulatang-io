@@ -125,18 +125,18 @@ void SocketChannel::sendByteNum(size_t num)
 {
     loop->assertInLoopThread();
 
-    finishedSendByteNum += num;
-    bool disableWriting = false;
-    {
-        std::lock_guard lock(writeLock);
-        if (finishedSendByteNum == waitSendCacheByteNum)
-        {
-            finishedSendByteNum = 0;
-            waitSendCacheByteNum = 0;
-            disableWriting = true;
-        }
-    }
-    if (disableWriting) {}
+    // finishedSendByteNum += num;
+    // bool disableWriting = false;
+    // {
+    //     std::lock_guard lock(writeLock);
+    //     if (finishedSendByteNum == waitSendCacheByteNum)
+    //     {
+    //         finishedSendByteNum = 0;
+    //         waitSendCacheByteNum = 0;
+    //         disableWriting = true;
+    //     }
+    // }
+    // if (disableWriting) {}
 }
 void SocketChannel::recvByteNum(char *buf, size_t num)
 {
