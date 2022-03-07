@@ -33,9 +33,9 @@ protected:
 class ClosableEventWatcher : public EventWatcher
 {
 public:
-    typedef std::function<void()> EventHandler;
+    using EventHandler = std::function<void ()>;
 
-    ClosableEventWatcher(EventLoop *_loop)
+    explicit ClosableEventWatcher(EventLoop *_loop)
         : loop(_loop)
     {}
 

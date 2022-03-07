@@ -9,7 +9,7 @@ namespace hulatang::io {
 class IOCPFdEventManager : public FdEventManager
 {
 public:
-    IOCPFdEventManager();
+    explicit IOCPFdEventManager(EventLoop *loop);
     ~IOCPFdEventManager();
 
     void process(microseconds blockTime) override;

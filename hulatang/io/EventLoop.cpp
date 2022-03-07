@@ -6,6 +6,7 @@
 #include "hulatang/base/String.hpp"
 
 #include <chrono>
+#include <memory>
 #include <thread>
 
 using microseconds = hulatang::io::EventLoop::microseconds;
@@ -22,6 +23,7 @@ namespace hulatang::io {
 using status::EnumEventLoopStatus;
 EventLoop::EventLoop()
     : currentTime(0)
+    , fdEventManager(FdEventManager::create(this))
     , timerEventManager(this)
 {
     init();
@@ -164,7 +166,7 @@ bool EventLoop::isIdle() const noexcept
 void EventLoop::processIo(microseconds blockTime)
 {
     DLOG_TRACE;
-    fdEventManager.process(blockTime);
+    fdEventManager->process(blockTime);
 }
 
 void EventLoop::processTimerAndTimeout()

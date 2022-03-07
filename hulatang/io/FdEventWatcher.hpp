@@ -17,15 +17,13 @@ public:
     using ReadEventHandler = std::function<void(size_t)>;
     using ErrorEventHandler = std::function<void(std::error_condition &)>;
 
+    using ClosableEventWatcher::ClosableEventWatcher;
+
     void setReadHandler(const ReadEventHandler &readHandler_)
     {
         readHandler = readHandler_;
     }
 
-    WriteEventHandler getWriteHandler() const
-    {
-        return writeHandler;
-    }
     void setWriteHandler(const WriteEventHandler &writeHandler_)
     {
         writeHandler = writeHandler_;
@@ -34,6 +32,11 @@ public:
     void setErrorHandler(const ErrorEventHandler &errorHandler_)
     {
         errorHandler = errorHandler_;
+    }
+
+    void setOpenHandler(const EventHandler &openHandler_)
+    {
+        openHandler = openHandler_;
     }
 
     void setCloseHandler(const EventHandler &closeHandler_)
@@ -59,6 +62,11 @@ public:
     void closeHandle()
     {
         closeHandler();
+    }
+
+    void errorHandle(std::error_condition & ec)
+    {
+        errorHandler(ec);
     }
 
 private:

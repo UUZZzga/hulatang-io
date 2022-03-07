@@ -18,7 +18,7 @@ public:
     using DefaultCallback = std::function<void(const std::shared_ptr<Channel> &)>;
 
 public:
-    explicit Channel(EventLoop *loop);
+    explicit Channel(EventLoop *loop, base::FileDescriptor &fd);
     virtual ~Channel() = default;
 
     EventLoop *getLoop()
@@ -27,7 +27,6 @@ public:
     }
 
     virtual void close() = 0;
-    virtual void connectEstablished() = 0;
 
     [[nodiscard]] bool isConnected();
     [[nodiscard]] bool isConnectionPending();
@@ -39,28 +38,32 @@ public:
 
     void enableReading()
     {
-        flags |= kReadEvent;
-        update();
+        int old = flags; flags |= kReadEvent;
+        update(old);
     }
     void disableReading()
     {
+        int old = flags;
         flags &= ~kReadEvent;
-        update();
+        update(old);
     }
     void enableWriting()
     {
+        int old = flags;
         flags |= kWriteEvent;
-        update();
+        update(old);
     }
     void disableWriting()
     {
+        int old = flags;
         flags &= ~kWriteEvent;
-        update();
+        update(old);
     }
     void disableAll()
     {
+        int old = flags;
         flags = kNoneEvent;
-        update();
+        update(old);
     }
     [[nodiscard]] bool isWriting() const
     {
@@ -71,7 +74,7 @@ public:
         return (flags & kReadEvent) != 0;
     }
 
-    void update() {}
+    virtual void update(int oldflag) = 0;
 
     virtual void handleRead() = 0;
 
@@ -85,8 +88,12 @@ public:
 
 protected:
     EventLoop *loop;
-    base::FileDescriptor fd;
+    base::FileDescriptor& fd;
     DefaultCallback closeCallback;
+#if _WIN32
+    static constexpr size_t bufferSize = 4096;
+    std::unique_ptr<char[]> buffer;
+#endif
     int flags;
 };
 } // namespace hulatang::io

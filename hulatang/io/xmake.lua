@@ -1,5 +1,6 @@
 local sources = {
     "Channel.cpp",
+    "Connector.cpp",
     "CycleEventManager.cpp",
     "CycleEventWatcher.cpp",
     "EventLoop.cpp",
@@ -9,6 +10,7 @@ local sources = {
     "IdleEventWatcher.cpp",
     "InvokeTimer.cpp",
     "SocketChannel.cpp",
+    "TCPClient.cpp",
     "TCPConnection.cpp",
     "TimerEventManager.cpp",
     "TimerEventWatcher.cpp",

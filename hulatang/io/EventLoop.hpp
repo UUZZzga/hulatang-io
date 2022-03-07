@@ -10,6 +10,7 @@
 #include "hulatang/io/InvokeTimer.hpp"
 
 #include <functional>
+#include <memory>
 #include <ratio>
 #include <stdint.h>
 #include <thread>
@@ -58,7 +59,7 @@ public:
 
     void updateTime();
 
-    FdEventManager& getFdEventManager() { return fdEventManager; }
+    FdEventManager& getFdEventManager() { return *fdEventManager; }
 
 private:
     void init();
@@ -80,8 +81,8 @@ private:
 
 private:
     microseconds currentTime;
+    std::unique_ptr<FdEventManager> fdEventManager;
     TimerEventManager timerEventManager;
-    FdEventManager fdEventManager;
     CycleEventManager cycleEventManager;
     IdleEventManager idleEventManager;
     std::thread::id tid;

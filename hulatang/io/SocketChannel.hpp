@@ -29,7 +29,7 @@ private:
     };
 
 public:
-    explicit SocketChannel(EventLoop *loop);
+    explicit SocketChannel(EventLoop *loop, base::FileDescriptor &fd);
 
     ~SocketChannel() override;
 
@@ -38,8 +38,6 @@ public:
 public:
     // shutdownInput();
     // shutdownOutput();
-
-    void connectEstablished() override;
 
     void connectFailed();
 
@@ -68,6 +66,10 @@ public:
 
     void recvByteNum(size_t num);
 
+    void update(int oldflag) override;
+
+    void handleRead() override;
+
 protected:
     void setState(StateE state);
 
@@ -92,12 +94,12 @@ private:
     size_t finishedSendByteNum;
 };
 
-bool SocketChannel::isConnected()
+inline bool SocketChannel::isConnected()
 {
     return state == kConnected;
 }
 
-void SocketChannel::setConnectionCallback(const DefaultCallback &connectionCallback)
+inline void SocketChannel::setConnectionCallback(const DefaultCallback &connectionCallback)
 {
     this->connectionCallback = connectionCallback;
 }
@@ -107,7 +109,7 @@ inline void SocketChannel::setNextTriggerByteNum(size_t triggerByteNum)
     this->triggerByteNum = triggerByteNum;
 }
 
-void SocketChannel::setMessageCallback(const MessageCallback &messageCallback)
+inline void SocketChannel::setMessageCallback(const MessageCallback &messageCallback)
 {
     this->messageCallback = messageCallback;
 }

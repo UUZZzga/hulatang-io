@@ -33,7 +33,10 @@ public:
         return std::string(szBuf, result);
     }
 
-    [[nodiscard]] std::error_condition default_error_condition(int error_code) const noexcept override;
+    [[nodiscard]] std::error_condition default_error_condition(int error_code) const noexcept override
+    {
+        return {error_code, *this};
+    }
 };
 
 #if defined(_MSC_VER)

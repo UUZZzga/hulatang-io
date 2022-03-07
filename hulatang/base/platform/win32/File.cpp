@@ -177,10 +177,19 @@ fd_t bind(std::string_view localHost, int localPort, std::error_code &ec) noexce
 void connect(fd_t fd, std::string_view peerHost, int peerPort, IO_DATA &data, std::error_code &ec) noexcept
 {
     assert(INVALID_SOCKET != fd);
-
+    assert(fd & socketFlag);
+    fd = fd & (~socketFlag);
     int addrSize = 0;
 
     sockaddr_u peerAddr = getSockaddr(peerHost, peerPort, ec);
+    if (peerAddr.sa.sa_family == AF_INET)
+    {
+        addrSize = sizeof(sockaddr_in);
+    }
+    else if (peerAddr.sa.sa_family == AF_INET6)
+    {
+        addrSize = sizeof(sockaddr_in6);
+    }
 
     LPFN_CONNECTEX ConnectEx = nullptr;
     DWORD dwBytes = 0;
@@ -189,6 +198,7 @@ void connect(fd_t fd, std::string_view peerHost, int peerPort, IO_DATA &data, st
                             sizeof(ConnectEx), &dwBytes, nullptr, nullptr))
     {
         ec = make_win32_error_code(WSAGetLastError());
+        return;
     }
 
     if (ConnectEx(fd, &peerAddr.sa, addrSize, nullptr, 0, nullptr, &data.overlapped) == FALSE)
@@ -199,11 +209,16 @@ void connect(fd_t fd, std::string_view peerHost, int peerPort, IO_DATA &data, st
 
 void read(fd_t fd, const Buf &buf, IO_DATA &data, std::error_code &ec) noexcept
 {
-    WSABUF wsabuf{.len = static_cast<ULONG>(buf.len), .buf = buf.buf};
-    DWORD flags = 0;
-    if (SOCKET_ERROR == WSARecv(fd, &wsabuf, 1, nullptr, &flags, &data.overlapped, nullptr))
+    if ((fd & socketFlag) != 0U)
     {
-        ec = make_win32_error_code(WSAGetLastError());
+        fd = fd & (~socketFlag);
+
+        WSABUF wsabuf{.len = static_cast<ULONG>(buf.len), .buf = buf.buf};
+        DWORD flags = 0;
+        if (SOCKET_ERROR == WSARecv(fd, &wsabuf, 1, nullptr, &flags, &data.overlapped, nullptr))
+        {
+            ec = make_win32_error_code(WSAGetLastError());
+        }
     }
 }
 
@@ -212,7 +227,7 @@ void write(fd_t fd, const Buf &buf, IO_DATA &data, std::error_code &ec) noexcept
     WSABUF wsabuf{.len = static_cast<ULONG>(buf.len), .buf = buf.buf};
     DWORD flags = 0;
 
-    if (SOCKET_ERROR == WSASend(fd, &wsabuf, 1, nullptr, flags, &data.overlapped, nullptr))
+    if (SOCKET_ERROR == WSASend((fd & socketFlag), &wsabuf, 1, nullptr, flags, &data.overlapped, nullptr))
     {
         ec = make_win32_error_code(WSAGetLastError());
     }
@@ -238,8 +253,8 @@ FileDescriptor::~FileDescriptor() noexcept = default;
 
 uintptr_t FileDescriptor::getFd() const noexcept
 {
-    assert(!impl);
-    return impl->fd;
+    assert(impl);
+    return impl->fd & (~socketFlag);
 }
 
 void FileDescriptor::open(std::string_view path, OFlag oflag)
@@ -268,7 +283,7 @@ void FileDescriptor::bind(std::string_view localHost, int localPort)
     impl->fd = fd;
 }
 
-void FileDescriptor::connect(std::string_view peerHost, int peerPort) noexcept
+void FileDescriptor::connect(std::string_view peerHost, int peerPort, std::error_condition &condition) noexcept
 {
     assert(impl);
 
@@ -282,6 +297,8 @@ void FileDescriptor::connect(std::string_view peerHost, int peerPort) noexcept
     // 处理错误
     if (ec.category() == win32_category() && ERROR_IO_PENDING == ec.value())
     {
+        impl->recvData.operationType = Type::OPEN;
+        condition = make_file_error_condition(FileErrorCode::CONNECTING);
         return;
     }
     HLT_CORE_WARN("error code: {}, message: {}", ec.value(), ec.message());
@@ -295,6 +312,7 @@ void FileDescriptor::read(const Buf &buf, std::error_condition &condition) noexc
     impl::read(impl->fd, buf, impl->recvData, ec);
     if (ec.category() == win32_category() && ERROR_IO_PENDING == ec.value())
     {
+        impl->recvData.operationType = Type::READ;
         return;
     }
     HLT_CORE_WARN("error code: {}, message: {}", ec.value(), ec.message());
@@ -307,6 +325,7 @@ void FileDescriptor::write(const Buf &buf, std::error_condition &condition) noex
     impl::write(impl->fd, buf, impl->sendData, ec);
     if (ec.category() == win32_category() && ERROR_IO_PENDING == ec.value())
     {
+        impl->recvData.operationType = Type::WRITE;
         return;
     }
     HLT_CORE_WARN("error code: {}, message: {}", ec.value(), ec.message());
@@ -315,7 +334,19 @@ void FileDescriptor::write(const Buf &buf, std::error_condition &condition) noex
 void FileDescriptor::close() noexcept
 {
     assert(impl);
+    if (impl->recvData.operationType != Type::NONE)
+    {
+        CancelIoEx(reinterpret_cast<HANDLE>(impl->fd), &(impl->recvData.overlapped));
+        impl->recvData.operationType = Type::NONE;
+    }
+    if (impl->sendData.operationType != Type::NONE)
+    {
+        CancelIoEx(reinterpret_cast<HANDLE>(impl->fd), &(impl->sendData.overlapped));
+        impl->sendData.operationType = Type::NONE;
+    }
+
     impl::close(impl->fd);
+    impl.reset();
 }
 
 } // namespace hulatang::base

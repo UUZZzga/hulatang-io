@@ -18,6 +18,8 @@ enum OFlag
 class FileDescriptor
 {
 public:
+    class ErrorCategory;
+
     FileDescriptor();
     ~FileDescriptor() noexcept;
 
@@ -30,7 +32,7 @@ public:
     void bind(std::string_view localHost, int localPort);
 
     // connect to remote
-    void connect(std::string_view peerHost, int peerPort) noexcept;
+    void connect(std::string_view peerHost, int peerPort, std::error_condition &condition) noexcept;
 
     void read(const Buf &buf, std::error_condition &condition) noexcept;
 
@@ -43,21 +45,27 @@ private:
     std::unique_ptr<Impl> impl;
 };
 
-enum class FileErrorCode : int
+enum FileErrorCode : int
 {
-    NOT_FOUND,
+    NONE,
+    CONNECTING,
+    _ERROR,
+    NOT_FOUND = _ERROR,
+    DEADLINE_EXCEEDED,
+    OUT_OF_RANGE,
     ALREADY_EXISTS,
     PERMISSION_DENIED,
     RESOURCE_EXHAUSTED,
-    FAILED_PRECONDITION
+    FAILED_PRECONDITION,
+    CONNECTION_REFUSED,
 };
 
-class file_error_category : public std::error_category
+class FileDescriptor::ErrorCategory : public std::error_category
 {
 public:
     // 66696C65 ASCII is file
     constexpr static uintptr_t FILE_ERROR_ADDR = 0x66696C65;
-    constexpr file_error_category() noexcept
+    constexpr ErrorCategory() noexcept
         : error_category(FILE_ERROR_ADDR)
     {}
 
@@ -72,12 +80,15 @@ public:
         return std::string(unknown_error);
     }
 
-    [[nodiscard]] std::error_condition default_error_condition(int error_code) const noexcept override;
+    [[nodiscard]] std::error_condition default_error_condition(int error_code) const noexcept override
+    {
+        return {error_code, *this};
+    }
 };
 
 [[nodiscard]] inline const std::error_category &file_category() noexcept
 {
-    static file_error_category category;
+    static FileDescriptor::ErrorCategory category;
     return category;
 }
 

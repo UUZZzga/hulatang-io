@@ -4,8 +4,8 @@
 
 namespace hulatang::io {
 
-SocketChannel::SocketChannel(EventLoop *loop)
-    : Channel(loop)
+SocketChannel::SocketChannel(EventLoop *loop, base::FileDescriptor &fd)
+    : Channel(loop, fd)
     , state(kConnecting)
     , triggerByteNum(0)
     , waitSendByteNum(0)
@@ -36,22 +36,6 @@ void SocketChannel::close()
             loop->queueInLoop([_this = shared_from_this()] { _this->forceCloseInLoop(); });
         }
     }
-}
-
-void SocketChannel::connectEstablished()
-{
-    loop->assertInLoopThread();
-    assert(state == kConnecting);
-
-    setState(kConnected);
-
-    if (connectionCallback)
-    {
-        connectionCallback(shared_from_this());
-    }
-#if OS_WIN
-    handleEvent();
-#endif
 }
 
 void SocketChannel::connectFailed()
@@ -165,5 +149,18 @@ void SocketChannel::recvByteNum(size_t num)
         close();
     }
 }
+
+void SocketChannel::update(int oldflag)
+{
+#if _WIN32
+    if (oldflag == 0)
+    {
+        std::error_condition condition;
+        fd.read({buffer.get(), bufferSize}, condition);
+    }
+#endif
+}
+
+void SocketChannel::handleRead() {}
 
 } // namespace hulatang::io

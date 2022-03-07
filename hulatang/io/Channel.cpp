@@ -2,8 +2,10 @@
 
 namespace hulatang::io {
 
-Channel::Channel(EventLoop *loop)
+Channel::Channel(EventLoop *loop, base::FileDescriptor &fd)
     : loop(loop)
+    , fd(fd)
+    , buffer(new char[bufferSize])
     , flags(kNoneEvent)
 {}
 

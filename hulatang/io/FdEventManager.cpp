@@ -3,6 +3,10 @@
 #include <thread>
 
 namespace hulatang::io {
+FdEventManager::FdEventManager(EventLoop *loop)
+    : loop(loop)
+{}
+
 void FdEventManager::process(microseconds blockTime)
 {
     std::this_thread::sleep_for(blockTime);

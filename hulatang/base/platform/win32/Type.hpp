@@ -19,9 +19,19 @@ union sockaddr_u
     sockaddr_in6 sin6;
 };
 
-struct IO_DATA{
+enum class Type
+{
+    NONE,
+    OPEN,
+    CLOSE,
+    READ,
+    WRITE,
+};
+
+struct IO_DATA
+{
     OVERLAPPED overlapped;
-    int operationType;
+    Type operationType;
 };
 
 struct FileDescriptor::Impl
@@ -30,6 +40,6 @@ struct FileDescriptor::Impl
     IO_DATA sendData;
     fd_t fd;
 };
-}
+} // namespace hulatang::base
 
 #endif // HULATANG_BASE_PLATFORM_WIN32_TYPE_HPP

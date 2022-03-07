@@ -1,6 +1,8 @@
 #include "hulatang/io/async/IOCPFdEventManager.hpp"
 
+#include "hulatang/base/File.hpp"
 #include "hulatang/base/error/ErrorCode.hpp"
+#include "hulatang/base/platform/win32/Type.hpp"
 #include "hulatang/io/EventLoop.hpp"
 #include "hulatang/io/SocketChannel.hpp"
 #include <chrono>
@@ -8,8 +10,23 @@
 constexpr uintptr_t WAKEUP_NUMBER = 1;
 
 namespace hulatang::io {
-IOCPFdEventManager::IOCPFdEventManager()
-    : iocpHandle(CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 0))
+
+std::unique_ptr<FdEventManager> FdEventManager::create(EventLoop *loop)
+{
+    return std::make_unique<IOCPFdEventManager>(loop);
+}
+
+using base::FileErrorCode;
+using base::make_file_error_condition;
+using base::Type::CLOSE;
+using base::Type::NONE;
+using base::Type::OPEN;
+using base::Type::READ;
+using base::Type::WRITE;
+
+IOCPFdEventManager::IOCPFdEventManager(EventLoop *loop)
+    : FdEventManager(loop)
+    , iocpHandle(CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 0))
 {}
 
 IOCPFdEventManager::~IOCPFdEventManager()
@@ -45,7 +62,7 @@ void IOCPFdEventManager::process(microseconds blockTime)
             }
             if (watcher == nullptr)
             {
-                auto ec = make_win32_error_code(WSAGetLastError());
+                auto ec = make_win32_error_code(err);
                 HLT_CORE_WARN("error code: {}, error message: {}", ec.value(), ec.message());
                 continue;
             }
@@ -57,56 +74,49 @@ void IOCPFdEventManager::process(microseconds blockTime)
             else if (ERROR_CONNECTION_REFUSED == err)
             {
                 // 远程计算机拒绝了网络连接。
-                watcher->closeHandle();
+                auto ec = make_file_error_condition(FileErrorCode::CONNECTION_REFUSED);
+                watcher->errorHandle(ec);
             }
             continue;
         }
         auto *data = CONTAINING_RECORD(pOverlapped, base::IO_DATA, overlapped);
-        int type = data->operationType;
-        data->operationType = -1;
-        if (type == 0)
+        auto type = data->operationType;
+        data->operationType = base::Type::NONE;
+        switch (type)
         {
-            watcher->readHandle(bytes);
-        }
-        else if (type == 1)
-        {
-            watcher->writeHandle(bytes);
-        }
-        else if (type == 2)
-        {
-            // accept
-        }
-        else if (type == 3)
-        {
+        case OPEN: {
             // connect
             watcher->openHandle();
         }
-        else if (type == 4)
-        {
+        break;
+        case CLOSE: {
             watcher->closeHandle();
         }
-
+        break;
+        case READ: {
+            watcher->readHandle(bytes);
+        }
+        break;
+        case WRITE: {
+            watcher->writeHandle(bytes);
+        }
+        default: {
+            HLT_CORE_ERROR("未知错误");
+        }
+        };
         loop->updateTime();
     }
 }
 
 void IOCPFdEventManager::add(const FdEventWatcherPtr &watcher, const base::FileDescriptor &descriptor)
 {
+    FdEventManager::add(watcher, descriptor);
     CreateIoCompletionPort(reinterpret_cast<HANDLE>(descriptor.getFd()), iocpHandle, reinterpret_cast<ULONG_PTR>(watcher.get()), 0);
 }
 
 void IOCPFdEventManager::cancel(const FdEventWatcherPtr &watcher)
 {
-    // if (m_io_datas[0].operationType != -1)
-    // {
-    //     CancelIoEx((HANDLE)getFd(), &(m_io_datas[0].overlapped));
-    //     m_io_datas[0].operationType = -1;
-    // }
-    // if (m_io_datas[1].operationType != -1)
-    // {
-    //     CancelIoEx((HANDLE)getFd(), &(m_io_datas[1].overlapped));
-    //     m_io_datas[1].operationType = -1;
-    // }
+    FdEventManager::cancel(watcher);
     // disableAll();
 }
 } // namespace hulatang::io
