@@ -4,7 +4,7 @@
 
 namespace hulatang::io {
 
-SocketChannel::SocketChannel(EventLoop *loop, base::FileDescriptor &fd)
+SocketChannel::SocketChannel(EventLoop *loop, base::FileDescriptor &fd, FdEventWatcherPtr watcher)
     : Channel(loop, fd)
     , state(kConnecting)
     , triggerByteNum(0)
@@ -138,22 +138,15 @@ void SocketChannel::sendByteNum(size_t num)
     }
     if (disableWriting) {}
 }
-void SocketChannel::recvByteNum(size_t num)
+void SocketChannel::recvByteNum(char *buf, size_t num)
 {
-    if (num > 0)
-    {
-        messageCallback(shared_from_this());
-    }
-    else if (num == 0)
-    {
-        close();
-    }
+    messageCallback(base::Buf{buf, num});
 }
 
 void SocketChannel::update(int oldflag)
 {
 #if _WIN32
-    if (oldflag == 0)
+    if (oldflag == 0 && (flags & kReadEvent) != 0)
     {
         std::error_condition condition;
         fd.read({buffer.get(), bufferSize}, condition);

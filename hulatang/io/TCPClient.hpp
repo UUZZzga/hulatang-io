@@ -1,6 +1,7 @@
 #ifndef HULATANG_IO_TCPCLIENT_HPP
 #define HULATANG_IO_TCPCLIENT_HPP
 
+#include "hulatang/base/Buf.hpp"
 #include "hulatang/io/Connector.hpp"
 #include "hulatang/io/TcpConnection.hpp"
 #include <memory>
@@ -10,7 +11,7 @@ class TCPClient
 {
 public:
     using ConnectionCallback = std::function<void(const TCPConnectionPtr &)>;
-    using MessageCallback = std::function<void(const TCPConnectionPtr &)>;
+    using MessageCallback = std::function<void(const TCPConnectionPtr &,const base::Buf&)>;
 
     TCPClient(EventLoop *_loop, std::string_view _host, int _port);
 

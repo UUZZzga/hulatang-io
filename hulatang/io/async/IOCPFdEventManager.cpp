@@ -94,7 +94,7 @@ void IOCPFdEventManager::process(microseconds blockTime)
         }
         break;
         case READ: {
-            watcher->readHandle(bytes);
+            watcher->readHandle(data->buf, bytes);
         }
         break;
         case WRITE: {

@@ -29,7 +29,7 @@ void TCPClient::stop()
 void TCPClient::newConnection(base::FileDescriptor &fd, FdEventWatcherPtr watcher)
 {
     loop->assertInLoopThread();
-    TCPConnectionPtr conn(std::make_shared<TCPConnection>(loop
+    TCPConnectionPtr conn(std::make_shared<TCPConnection>(loop, watcher
         // , "", fd, localAddr, peerAddr
         ));
     conn->setConnectionCallback(connectionCallback);

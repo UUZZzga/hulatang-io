@@ -31,6 +31,7 @@ enum class Type
 struct IO_DATA
 {
     OVERLAPPED overlapped;
+    char* buf;
     Type operationType;
 };
 

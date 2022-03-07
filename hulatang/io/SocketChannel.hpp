@@ -1,6 +1,7 @@
 #ifndef MYNET_TCP_CONNECTION_HPP_
 #define MYNET_TCP_CONNECTION_HPP_
 
+#include "hulatang/base/Buf.hpp"
 #include "hulatang/base/Log.hpp"
 #include "hulatang/io/Channel.hpp"
 #include "hulatang/io/EventLoop.hpp"
@@ -13,11 +14,11 @@
 #include <mutex>
 
 namespace hulatang::io {
+class TCPConnection;
 class SocketChannel : public std::enable_shared_from_this<SocketChannel>, public Channel
 {
 public:
-    typedef std::function<void(const std::shared_ptr<SocketChannel> &)> DefaultCallback;
-    typedef std::function<void(const std::shared_ptr<SocketChannel> &)> MessageCallback;
+    typedef std::function<void(const base::Buf &)> MessageCallback;
 
 private:
     enum StateE
@@ -29,7 +30,7 @@ private:
     };
 
 public:
-    explicit SocketChannel(EventLoop *loop, base::FileDescriptor &fd);
+    SocketChannel(EventLoop *loop, base::FileDescriptor &fd, FdEventWatcherPtr watcher);
 
     ~SocketChannel() override;
 
@@ -64,7 +65,7 @@ public:
 
     void sendByteNum(size_t num);
 
-    void recvByteNum(size_t num);
+    void recvByteNum(char *buf, size_t num);
 
     void update(int oldflag) override;
 

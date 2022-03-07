@@ -18,9 +18,7 @@ int main(int _argc, const char **_argv)
     TCPClient client(&loop, "localhost", 8080);
 
     client.setConnectionCallback([](const auto &conn) { HLT_INFO("ConnectionCallback"); });
-    client.setMessageCallback([](const auto &conn) {
-
-    });
+    client.setMessageCallback([](const auto &conn, const auto &buf) { HLT_INFO("{}", std::string_view(buf.buf, buf.len)); });
 
     loop.queueInLoop([&] { client.connect(); });
     loop.run();

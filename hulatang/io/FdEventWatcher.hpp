@@ -14,7 +14,7 @@ class FdEventWatcher : public ClosableEventWatcher
 {
 public:
     using WriteEventHandler = std::function<void(size_t)>;
-    using ReadEventHandler = std::function<void(size_t)>;
+    using ReadEventHandler = std::function<void(char *, size_t)>;
     using ErrorEventHandler = std::function<void(std::error_condition &)>;
 
     using ClosableEventWatcher::ClosableEventWatcher;
@@ -44,9 +44,9 @@ public:
         closeHandler = closeHandler_;
     }
 
-    void readHandle(size_t num)
+    void readHandle(char *buf, size_t num)
     {
-        readHandler(num);
+        readHandler(buf, num);
     }
 
     void writeHandle(size_t num)
@@ -64,7 +64,7 @@ public:
         closeHandler();
     }
 
-    void errorHandle(std::error_condition & ec)
+    void errorHandle(std::error_condition &ec)
     {
         errorHandler(ec);
     }

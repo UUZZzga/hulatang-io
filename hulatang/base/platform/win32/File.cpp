@@ -214,6 +214,7 @@ void read(fd_t fd, const Buf &buf, IO_DATA &data, std::error_code &ec) noexcept
         fd = fd & (~socketFlag);
 
         WSABUF wsabuf{.len = static_cast<ULONG>(buf.len), .buf = buf.buf};
+        data.buf = buf.buf;
         DWORD flags = 0;
         if (SOCKET_ERROR == WSARecv(fd, &wsabuf, 1, nullptr, &flags, &data.overlapped, nullptr))
         {
@@ -226,6 +227,7 @@ void write(fd_t fd, const Buf &buf, IO_DATA &data, std::error_code &ec) noexcept
 {
     WSABUF wsabuf{.len = static_cast<ULONG>(buf.len), .buf = buf.buf};
     DWORD flags = 0;
+    data.buf = buf.buf;
 
     if (SOCKET_ERROR == WSASend((fd & socketFlag), &wsabuf, 1, nullptr, flags, &data.overlapped, nullptr))
     {
