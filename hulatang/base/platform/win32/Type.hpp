@@ -6,6 +6,8 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
+#include <ws2spi.h>
+
 #include <Mswsock.h>
 
 namespace hulatang::base {
@@ -31,7 +33,7 @@ enum class Type
 struct IO_DATA
 {
     OVERLAPPED overlapped;
-    char* buf;
+    char *buf;
     Type operationType;
 };
 
@@ -40,6 +42,8 @@ struct FileDescriptor::Impl
     IO_DATA recvData;
     IO_DATA sendData;
     fd_t fd;
+    char lpOutputBuf[128];
+    DWORD dwBytes;
 };
 } // namespace hulatang::base
 

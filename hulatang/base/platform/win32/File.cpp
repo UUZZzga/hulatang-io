@@ -174,6 +174,48 @@ fd_t bind(std::string_view localHost, int localPort, std::error_code &ec) noexce
     return fd | socketFlag;
 }
 
+void listen(fd_t fd, std::error_code &ec)
+{
+    if ((fd & socketFlag) != 0U)
+    {
+        fd = fd & (~socketFlag);
+        if (0 != ::listen(fd, SOMAXCONN))
+        {
+            ec = make_win32_error_code(WSAGetLastError());
+        }
+    }
+    else
+    {
+        abort();
+    }
+}
+
+void accept(fd_t listen, fd_t &accept, char *buf, IO_DATA &data, std::error_code &ec)
+{
+    if ((listen & socketFlag) != 0U)
+    {
+        DWORD dwBytes = 0;
+        listen = listen & (~socketFlag);
+        accept = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, 0, WSA_FLAG_OVERLAPPED);
+        if (INVALID_SOCKET == accept)
+        {
+            ec = make_win32_error_code(WSAGetLastError());
+            return;
+        }
+        int addrLen = sizeof(sockaddr_in) + 16; // TODO 没有支持ipv6
+        if (AcceptEx(listen, accept, buf, 0, addrLen, addrLen, &dwBytes, &data.overlapped) == FALSE)
+        {
+            ec = make_win32_error_code(WSAGetLastError());
+        }
+        data.operationType = hulatang::base::Type::READ;
+        accept |= socketFlag;
+    }
+    else
+    {
+        abort();
+    }
+}
+
 void connect(fd_t fd, std::string_view peerHost, int peerPort, IO_DATA &data, std::error_code &ec) noexcept
 {
     assert(INVALID_SOCKET != fd);
@@ -204,6 +246,7 @@ void connect(fd_t fd, std::string_view peerHost, int peerPort, IO_DATA &data, st
     if (ConnectEx(fd, &peerAddr.sa, addrSize, nullptr, 0, nullptr, &data.overlapped) == FALSE)
     {
         ec = make_win32_error_code(WSAGetLastError());
+        return;
     }
     data.operationType = hulatang::base::Type::OPEN;
 }
@@ -220,6 +263,7 @@ void read(fd_t fd, const Buf &buf, IO_DATA &data, std::error_code &ec) noexcept
         if (SOCKET_ERROR == WSARecv(fd, &wsabuf, 1, nullptr, &flags, &data.overlapped, nullptr))
         {
             ec = make_win32_error_code(WSAGetLastError());
+            return;
         }
     }
     data.operationType = hulatang::base::Type::READ;
@@ -238,6 +282,7 @@ void write(fd_t fd, const Buf &buf, IO_DATA &data, std::error_code &ec) noexcept
         if (SOCKET_ERROR == WSASend(fd, &wsabuf, 1, nullptr, flags, &data.overlapped, nullptr))
         {
             ec = make_win32_error_code(WSAGetLastError());
+            return;
         }
     }
     data.operationType = hulatang::base::Type::WRITE;
@@ -247,7 +292,7 @@ void close(fd_t fd) noexcept
 {
     if ((fd & socketFlag) == 0)
     {
-        close(fd & (~socketFlag));
+        ::close(static_cast<int>(fd & (~socketFlag)));
     }
     else
     {
@@ -260,6 +305,10 @@ namespace hulatang::base {
 FileDescriptor::FileDescriptor() = default;
 
 FileDescriptor::~FileDescriptor() noexcept = default;
+
+FileDescriptor::FileDescriptor(FileDescriptor &&other) noexcept
+    : impl(move(other.impl))
+{}
 
 uintptr_t FileDescriptor::getFd() const noexcept
 {
@@ -291,6 +340,36 @@ void FileDescriptor::bind(std::string_view localHost, int localPort)
     }
     impl = std::make_unique<Impl>();
     impl->fd = fd;
+}
+
+void FileDescriptor::listen(std::error_condition &condition)
+{
+    assert(impl);
+    std::error_code ec;
+    impl::listen(impl->fd, ec);
+}
+
+void FileDescriptor::accept(FileDescriptor &fd, std::error_condition &condition)
+{
+    assert(impl);
+    assert(!fd.impl);
+    fd.impl = std::make_unique<Impl>();
+    std::error_code ec;
+    impl::accept(impl->fd, fd.impl->fd, impl->lpOutputBuf, impl->recvData, ec);
+    if (!ec)
+    {
+        return;
+    }
+    // 处理错误
+    if (ec.category() == win32_category() && ERROR_IO_PENDING == ec.value())
+    {
+        condition = make_file_error_condition(FileErrorCode::CONNECTING);
+        fd.impl->recvData.operationType = hulatang::base::Type::OPEN;
+        return;
+    }
+    HLT_CORE_WARN("error code: {}, message: {}", ec.value(), ec.message());
+    fd.close();
+    fd.impl.reset();
 }
 
 void FileDescriptor::connect(std::string_view peerHost, int peerPort, std::error_condition &condition) noexcept

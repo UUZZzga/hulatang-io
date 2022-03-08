@@ -15,6 +15,7 @@ public:
         kReadEvent = 1,
         kWriteEvent = 2
     };
+    using UpdateCallback = std::function<void(int)>;
     using DefaultCallback = std::function<void(const std::shared_ptr<Channel> &)>;
 
 public:

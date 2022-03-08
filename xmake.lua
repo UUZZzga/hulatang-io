@@ -59,7 +59,7 @@ end
 
 --系统库
 if is_host("windows") then
-    add_syslinks("Ws2_32", "Shell32", "PSAPI", "DbgHelp")
+    add_syslinks("Ws2_32", "Mswsock", "Shell32", "PSAPI", "DbgHelp")
 elseif is_host("linux") then
     add_syslinks("pthread")
 end

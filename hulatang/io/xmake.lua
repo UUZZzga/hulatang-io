@@ -12,6 +12,7 @@ local sources = {
     "SocketChannel.cpp",
     "TCPClient.cpp",
     "TCPConnection.cpp",
+    "TCPServer.cpp",
     "TimerEventManager.cpp",
     "TimerEventWatcher.cpp",
 }
@@ -26,7 +27,13 @@ target("hulatang_io")
         add_files(src)
     end
     if is_host("windows") then
-        add_files("async/IOCPFdEventManager.cpp")
+        local win32_sources = {
+            "async/IOCPFdEventManager.cpp",
+            "async/Win32Acceptor.cpp"
+        }
+        for _, src in ipairs(win32_sources) do
+            add_files(src)
+        end
     end
 
 includes("tests")
