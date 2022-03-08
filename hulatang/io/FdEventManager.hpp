@@ -16,6 +16,7 @@ public:
     using microseconds = std::chrono::microseconds;
 
     explicit FdEventManager(EventLoop *loop);
+    virtual ~FdEventManager() = default;
 
     virtual void process(microseconds blockTime);
 

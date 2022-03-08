@@ -23,7 +23,6 @@ namespace hulatang::io {
 using status::EnumEventLoopStatus;
 EventLoop::EventLoop()
     : currentTime(0)
-    , fdEventManager(FdEventManager::create(this))
     , timerEventManager(this)
 {
     init();
@@ -85,6 +84,7 @@ void EventLoop::init()
 {
     DLOG_TRACE;
     status.store(EnumEventLoopStatus::Initializing);
+    fdEventManager = FdEventManager::create(this);
     tid = std::this_thread::get_id();
     initNotifyPipeWatcher();
     status.store(EnumEventLoopStatus::Initialized);

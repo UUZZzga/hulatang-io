@@ -4,6 +4,8 @@ local sources = {
     "CycleEventManager.cpp",
     "CycleEventWatcher.cpp",
     "EventLoop.cpp",
+    "EventLoopThread.cpp",
+    "EventLoopThreadPool.cpp",
     "EventWatcher.cpp",
     "FdEventManager.cpp",
     "IdleEventManager.cpp",
