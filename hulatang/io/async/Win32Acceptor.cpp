@@ -3,6 +3,7 @@
 #include "hulatang/io/Acceptor.hpp"
 
 #include "hulatang/io/EventLoop.hpp"
+#include "hulatang/io/EventLoopThreadPool.hpp"
 
 namespace hulatang::io {
 Acceptor::Acceptor(EventLoop *_loop, std::string_view listenAddr, int port)
@@ -40,8 +41,12 @@ void Acceptor::acceptInLoop()
 {
     loop->assertInLoopThread();
     std::error_condition condition;
-    FdEventWatcherPtr watcher = std::make_shared<FdEventWatcher>(loop);
-    loop->getFdEventManager().add(watcher, newFd);
+
+    auto *nextLoop = threadPool->getNextLoop();
+    FdEventWatcherPtr watcher = std::make_shared<FdEventWatcher>(nextLoop);
+    nextLoop->getFdEventManager().add(watcher, newFd);
+    watcher->setCloseHandler([nextLoop, watcher] { nextLoop->getFdEventManager().cancel(watcher); });
+
     newConnectionCallback(base::FileDescriptor{std::move(newFd)}, watcher);
     acceptFd.accept(newFd, condition);
 }

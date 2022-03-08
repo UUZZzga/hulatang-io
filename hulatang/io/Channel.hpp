@@ -29,9 +29,6 @@ public:
 
     virtual void close() = 0;
 
-    [[nodiscard]] bool isConnected();
-    [[nodiscard]] bool isConnectionPending();
-
     [[nodiscard]] bool isNoneEvent() const
     {
         return flags == kNoneEvent;

@@ -3,8 +3,10 @@
 
 #include "hulatang/base/File.hpp"
 #include "hulatang/io/Acceptor.hpp"
+#include "hulatang/io/EventLoopThreadPool.hpp"
 #include "hulatang/io/TcpConnection.hpp"
 #include <functional>
+#include <memory>
 #include <string_view>
 #include <tuple>
 #include <unordered_map>
@@ -17,6 +19,8 @@ public:
     using MessageCallback = std::function<void(const TCPConnectionPtr &, const base::Buf &)>;
 
     TCPServer(EventLoop *_loop, std::string_view listenAddr, int port);
+
+    void setThreadNum(int numThreads);
 
     void setConnectionCallback(ConnectionCallback cb)
     {
@@ -36,11 +40,12 @@ private:
     void removeConnection(const TCPConnectionPtr &conn);
 
 private:
-    EventLoop *loop;
-    Acceptor acceptor;
     ConnectionCallback connectionCallback;
     MessageCallback messageCallback;
+    EventLoop *loop;
+    std::unique_ptr<EventLoopThreadPool> pool;
     std::unordered_map<std::string, std::tuple<TCPConnectionPtr, base::FileDescriptor>> map;
+    Acceptor acceptor;
 };
 } // namespace hulatang::io
 #endif // HULATANG_IO_TCPSERVER_HPP

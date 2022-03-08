@@ -18,6 +18,14 @@ public:
     using MessageCallback = std::function<void(const TCPConnectionPtr &, const base::Buf &)>;
     using CloseCallback = std::function<void(const TCPConnectionPtr &)>;
 
+    enum StateE
+    {
+        kConnecting,
+        kConnected,
+        kDisconnecting,
+        kDisconnected,
+    };
+
     TCPConnection(EventLoop *_loop, const FdEventWatcherPtr &watcher);
 
     void send(const base::Buf &buf);
@@ -53,6 +61,21 @@ public:
         return loop;
     }
 
+    void setState(StateE state)
+    {
+        this->state = state;
+    }
+
+    bool isConnecting()
+    {
+        return state == kConnecting;
+    }
+
+    bool isConnected()
+    {
+        return state == kConnected;
+    }
+
 private:
     EventLoop *loop;
     SocketChannelPtr channel;
@@ -61,6 +84,7 @@ private:
     MessageCallback messageCallback;
     CloseCallback closeCallback;
     std::atomic_int32_t sending;
+    std::atomic<StateE> state;
 };
 } // namespace hulatang::io
 

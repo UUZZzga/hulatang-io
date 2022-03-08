@@ -11,6 +11,8 @@ using status::EnumEventLoopStatus;
 EventLoopThreadPool::EventLoopThreadPool(EventLoop *baseLoop, std::string_view nameArg)
     : baseLoop_(baseLoop)
     , name_(nameArg)
+    , numThreads_(0)
+    , next_(0)
 {}
 
 EventLoopThreadPool::~EventLoopThreadPool()
@@ -73,6 +75,11 @@ EventLoop *EventLoopThreadPool::getLoopForHash(size_t hashCode)
 std::vector<EventLoop *> EventLoopThreadPool::getAllLoops()
 {
     return loops_;
+}
+
+bool EventLoopThreadPool::started() const
+{
+    return status == EnumEventLoopStatus::Running;
 }
 
 } // namespace hulatang::io

@@ -20,17 +20,8 @@ class SocketChannel : public std::enable_shared_from_this<SocketChannel>, public
 public:
     typedef std::function<void(const base::Buf &)> MessageCallback;
 
-private:
-    enum StateE
-    {
-        kDisconnected,
-        kConnecting,
-        kConnected,
-        kDisconnecting
-    };
-
 public:
-    SocketChannel(EventLoop *loop, base::FileDescriptor &fd, FdEventWatcherPtr watcher);
+    SocketChannel(EventLoop *loop, base::FileDescriptor &fd, FdEventWatcherPtr _watcher);
 
     ~SocketChannel() override;
 
@@ -51,12 +42,6 @@ public:
 
     bool send(const base::Buf &buf);
 
-    bool isConnecting()
-    {
-        return state == kConnecting;
-    }
-    bool isConnected();
-
     void setConnectionCallback(const DefaultCallback &connectionCallback);
 
     void setNextTriggerByteNum(size_t triggerByteNum);
@@ -71,9 +56,6 @@ public:
 
     void handleRead() override;
 
-protected:
-    void setState(StateE state);
-
 private:
     void sendInLoop(const base::Buf &buf);
 
@@ -86,19 +68,12 @@ private:
     MessageCallback messageCallback;
 
     std::weak_ptr<FdEventWatcher> watcher;
-    std::atomic<StateE> state;
     size_t triggerByteNum;
-
     std::mutex writeLock;
     size_t waitSendByteNum;
     size_t waitSendCacheByteNum;
     size_t finishedSendByteNum;
 };
-
-inline bool SocketChannel::isConnected()
-{
-    return state == kConnected;
-}
 
 inline void SocketChannel::setConnectionCallback(const DefaultCallback &connectionCallback)
 {
@@ -113,11 +88,6 @@ inline void SocketChannel::setNextTriggerByteNum(size_t triggerByteNum)
 inline void SocketChannel::setMessageCallback(const MessageCallback &messageCallback)
 {
     this->messageCallback = messageCallback;
-}
-
-inline void SocketChannel::setState(StateE state)
-{
-    this->state = state;
 }
 
 } // namespace hulatang::io

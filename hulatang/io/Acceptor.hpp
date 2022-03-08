@@ -9,6 +9,7 @@
 
 namespace hulatang::io {
 class EventLoop;
+class EventLoopThreadPool;
 class Acceptor
 {
 public:
@@ -27,11 +28,15 @@ public:
     {
         // return listening_;
     }
+
+    void setThreadPool(EventLoopThreadPool *threadPool_) { threadPool = threadPool_; }
+
 private:
     void acceptInLoop();
 
 private:
     EventLoop *loop;
+    EventLoopThreadPool *threadPool;
     base::FileDescriptor acceptFd;
     base::FileDescriptor newFd;
     NewConnectionCallback newConnectionCallback;

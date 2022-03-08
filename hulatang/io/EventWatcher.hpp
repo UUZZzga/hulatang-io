@@ -46,6 +46,8 @@ public:
         cancelCallback = cancelCallback_;
     }
 
+    [[nodiscard]] EventLoop *getLoop() const { return loop; }
+
 protected:
     virtual void doClose() {}
 

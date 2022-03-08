@@ -18,13 +18,21 @@ int main(int _argc, const char **_argv)
     EventLoop loop;
     TCPServer server(&loop, "localhost", 8080);
 
+    server.setThreadNum(8);
+
     server.setConnectionCallback([](const auto &conn) {
-        HLT_INFO("ConnectionCallback");
+        if (conn->isConnected())
+        {
+            HLT_INFO("new conn");
+        }
+        else
+        {
+            HLT_INFO("des conn");
+        }
     });
     server.setMessageCallback([](const auto &conn, const auto &buf) -> void {
         HLT_INFO("{}", std::string_view(buf.buf, buf.len));
         conn->send(buf);
-        conn->getLoop()->stop();
     });
 
     server.start();

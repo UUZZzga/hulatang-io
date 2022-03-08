@@ -25,10 +25,7 @@ public:
     EventLoop *getLoopForHash(size_t hashCode);
 
     std::vector<EventLoop *> getAllLoops();
-    [[nodiscard]] bool started() const
-    {
-        return started_;
-    }
+    [[nodiscard]] bool started() const;
 
     [[nodiscard]] const std::string &name() const
     {
@@ -44,7 +41,6 @@ private:
     std::string name_;
     int numThreads_;
     int next_;
-    bool started_;
 };
 } // namespace hulatang::io
 

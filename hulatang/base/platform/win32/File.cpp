@@ -263,7 +263,6 @@ void read(fd_t fd, const Buf &buf, IO_DATA &data, std::error_code &ec) noexcept
         if (SOCKET_ERROR == WSARecv(fd, &wsabuf, 1, nullptr, &flags, &data.overlapped, nullptr))
         {
             ec = make_win32_error_code(WSAGetLastError());
-            return;
         }
     }
     data.operationType = hulatang::base::Type::READ;
@@ -282,7 +281,6 @@ void write(fd_t fd, const Buf &buf, IO_DATA &data, std::error_code &ec) noexcept
         if (SOCKET_ERROR == WSASend(fd, &wsabuf, 1, nullptr, flags, &data.overlapped, nullptr))
         {
             ec = make_win32_error_code(WSAGetLastError());
-            return;
         }
     }
     data.operationType = hulatang::base::Type::WRITE;
@@ -358,6 +356,7 @@ void FileDescriptor::accept(FileDescriptor &fd, std::error_condition &condition)
     impl::accept(impl->fd, fd.impl->fd, impl->lpOutputBuf, impl->recvData, ec);
     if (!ec)
     {
+        fd.impl->recvData.operationType = hulatang::base::Type::OPEN;
         return;
     }
     // 处理错误

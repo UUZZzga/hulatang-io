@@ -4,9 +4,9 @@
 
 namespace hulatang::io {
 
-SocketChannel::SocketChannel(EventLoop *loop, base::FileDescriptor &fd, FdEventWatcherPtr watcher)
+SocketChannel::SocketChannel(EventLoop *loop, base::FileDescriptor &fd, FdEventWatcherPtr _watcher)
     : Channel(loop, fd)
-    , state(kConnecting)
+    , watcher(_watcher)
     , triggerByteNum(0)
     , waitSendByteNum(0)
     , waitSendCacheByteNum(0)
@@ -15,35 +15,25 @@ SocketChannel::SocketChannel(EventLoop *loop, base::FileDescriptor &fd, FdEventW
 
 SocketChannel::~SocketChannel()
 {
-    if (state != kDisconnected)
-    {
-        forceCloseInLoop();
-    }
+    forceCloseInLoop();
 }
 
 void SocketChannel::close()
 {
-    if (state == kConnected || state == kDisconnecting)
+    if (loop->isInLoopThread())
     {
-        state = kDisconnecting;
-
-        if (loop->isInLoopThread())
-        {
-            forceCloseInLoop();
-        }
-        else
-        {
-            loop->queueInLoop([_this = shared_from_this()] { _this->forceCloseInLoop(); });
-        }
+        forceCloseInLoop();
+    }
+    else
+    {
+        loop->queueInLoop([_this = shared_from_this()] { _this->forceCloseInLoop(); });
     }
 }
 
 void SocketChannel::connectFailed()
 {
     loop->assertInLoopThread();
-    assert(state == kConnecting);
     Channel::disableAll();
-    setState(kDisconnected);
 }
 
 void SocketChannel::handleRead(const base::Buf &buf)
@@ -72,14 +62,6 @@ bool SocketChannel::send(const base::Buf &buf)
 void SocketChannel::sendInLoop(const base::Buf &buf)
 {
     loop->assertInLoopThread();
-
-    bool faultError = false;
-    if (state == kDisconnected)
-    {
-        HLT_CORE_WARN("disconnected, give up writing");
-        return;
-    }
-
     if (isWriting() || waitSendByteNum == 0)
     {
         return;
@@ -95,29 +77,17 @@ void SocketChannel::forceCloseInLoop()
 {
     loop->assertInLoopThread();
     // EventLoop 队列里存在事件但还没执行 forceCloseInLoop 被自己线程 再次执行
-    if (state == kDisconnecting)
-    {
-        auto ptr = watcher.lock();
-        if (!ptr)
-        {
-            return;
-        }
-        loop->getFdEventManager().cancel(ptr);
-        fd.close();
-        state = kDisconnected;
-        if (connectionCallback)
-        {
-            connectionCallback(shared_from_this());
-        }
-    }
+
+    auto ptr = watcher.lock();
+    assert(ptr);
+    connectionCallback(shared_from_this());
+    loop->getFdEventManager().cancel(ptr);
+    fd.close();
 }
 
 void SocketChannel::runSend(const base::Buf &buf)
 {
-    if (state == kConnected)
-    {
-        loop->runInLoop([_this = shared_from_this(), buf] { _this->sendInLoop(buf); });
-    }
+    loop->runInLoop([_this = shared_from_this(), buf] { _this->sendInLoop(buf); });
     DLOG_TRACE;
 }
 
@@ -140,7 +110,13 @@ void SocketChannel::sendByteNum(size_t num)
 }
 void SocketChannel::recvByteNum(char *buf, size_t num)
 {
+    if (num == 0)
+    {
+        forceCloseInLoop();
+        return;
+    }
     messageCallback(base::Buf{buf, num});
+    handleRead(base::Buf{buf, num});
 }
 
 void SocketChannel::update(int oldflag)

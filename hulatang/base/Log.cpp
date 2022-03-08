@@ -11,9 +11,9 @@ void Log::init()
 {
     spdlog::set_pattern("%^[%T.%e]-%t-%l %n: %v%$");
     CoreLogger = spdlog::stdout_color_mt("HULATANG");
-    CoreLogger->set_level(spdlog::level::trace);
+    CoreLogger->set_level(spdlog::level::info);
     ClientLogger = spdlog::stdout_color_mt("APP");
-    ClientLogger->set_level(spdlog::level::trace);
+    ClientLogger->set_level(spdlog::level::info);
 }
 
 } // namespace hulatang::base

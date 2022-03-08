@@ -14,4 +14,5 @@ async def tcp_echo_client(message):
     print('Close the connection')
     writer.close()
 
-asyncio.run(tcp_echo_client('Hello World!'))
+tasks = [tcp_echo_client('Hello World!') for _ in range(1000)]
+asyncio.run(asyncio.wait(tasks))
