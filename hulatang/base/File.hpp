@@ -27,9 +27,20 @@ public:
 
     [[nodiscard]] uintptr_t getFd() const noexcept;
 
-    // open file
-    void open(std::string_view path, OFlag oflag);
+    // open
+    void open(std::string_view path, OFlag oflag, std::error_condition &condition);
 
+    // create
+    void create(std::string_view path, OFlag oflag, std::error_condition &condition);
+
+    // lseek
+    int64_t lseek(int64_t offset, int whence, std::error_condition &condition);
+
+#if _WIN32
+    void updatePosition(uint64_t position);
+#endif
+
+    // ======================= socket ==================================
     // bind
     void bind(std::string_view localHost, int localPort);
 

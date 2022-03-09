@@ -123,17 +123,56 @@ inline DWORD buildAccess(OFlag oflag)
 
 fd_t open(std::string_view path, OFlag oflag, std::error_code &ec) noexcept
 {
-    std::variant<fd_t, HANDLE> var;
+    union
+    {
+        fd_t fd;
+        HANDLE handle;
+    };
     DWORD access = buildAccess(oflag);
-    std::get<HANDLE>(var) = CreateFile(path.data(), access, 0, nullptr, OPEN_EXISTING,
+    handle = CreateFile(path.data(), access, 0, nullptr, OPEN_EXISTING,
         //   FILE_FLAG_NO_BUFFERING |
         FILE_FLAG_OVERLAPPED, nullptr);
-    if (std::get<fd_t>(var) == FdNull)
+    if (fd == FdNull)
     {
         ec = make_win32_error_code(static_cast<int>(GetLastError()));
         return {};
     }
-    return std::get<fd_t>(var);
+    return fd;
+}
+
+fd_t create(std::string_view path, OFlag oflag, std::error_code &ec) noexcept
+{
+    union
+    {
+        fd_t fd;
+        HANDLE handle;
+    };
+    DWORD access = buildAccess(oflag);
+    handle = CreateFile(path.data(), access, 0, nullptr, CREATE_ALWAYS, FILE_FLAG_OVERLAPPED, nullptr);
+    if (fd == FdNull)
+    {
+        ec = make_win32_error_code(static_cast<int>(GetLastError()));
+        return {};
+    }
+    return fd;
+}
+
+int64_t lseek(fd_t fd, int64_t offset, int whence, std::error_code &ec) noexcept
+{
+    if ((fd & socketFlag) != 0U)
+    {
+        abort();
+    }
+    LARGE_INTEGER move = {.QuadPart = offset};
+    LARGE_INTEGER li = {.QuadPart = 0};
+
+    BOOL bRet = SetFilePointerEx(reinterpret_cast<HANDLE>(fd), move, &li, whence);
+    if (bRet == FALSE)
+    {
+        ec = make_win32_error_code(GetLastError());
+        return -1;
+    }
+    return li.QuadPart;
 }
 
 fd_t bind(std::string_view localHost, int localPort, std::error_code &ec) noexcept
@@ -265,6 +304,35 @@ void read(fd_t fd, const Buf &buf, IO_DATA &data, std::error_code &ec) noexcept
             ec = make_win32_error_code(WSAGetLastError());
         }
     }
+    else
+    {
+        LARGE_INTEGER fileSize;
+        LARGE_INTEGER filePointer;
+        data.buf = buf.buf;
+        size_t bufLen = buf.len;
+        BOOL bRet = ::GetFileSizeEx(reinterpret_cast<HANDLE>(fd), &fileSize);
+        if (bRet == 0)
+        {
+            ec = make_win32_error_code(GetLastError());
+            return;
+        }
+        filePointer.QuadPart = reinterpret_cast<uintptr_t>(data.overlapped.Pointer);
+
+        if (filePointer.QuadPart > fileSize.QuadPart)
+        {
+            bufLen = 0;
+        }
+        else if (filePointer.QuadPart + static_cast<LONGLONG>(buf.len) > fileSize.QuadPart)
+        {
+            bufLen = fileSize.QuadPart - filePointer.QuadPart;
+        }
+
+        bRet = ::ReadFile(reinterpret_cast<HANDLE>(fd), buf.buf, bufLen, nullptr, &data.overlapped);
+        if (bRet == 0)
+        {
+            ec = make_win32_error_code(GetLastError());
+        }
+    }
     data.operationType = hulatang::base::Type::READ;
 }
 
@@ -283,6 +351,15 @@ void write(fd_t fd, const Buf &buf, IO_DATA &data, std::error_code &ec) noexcept
             ec = make_win32_error_code(WSAGetLastError());
         }
     }
+    else
+    {
+        data.buf = buf.buf;
+        BOOL bRet = ::WriteFile(reinterpret_cast<HANDLE>(fd), buf.buf, static_cast<DWORD>(buf.len), nullptr, &data.overlapped);
+        if (bRet == 0)
+        {
+            ec = make_win32_error_code(GetLastError());
+        }
+    }
     data.operationType = hulatang::base::Type::WRITE;
 }
 
@@ -290,7 +367,7 @@ void close(fd_t fd) noexcept
 {
     if ((fd & socketFlag) == 0)
     {
-        ::close(static_cast<int>(fd & (~socketFlag)));
+        ::CloseHandle(reinterpret_cast<HANDLE>(fd));
     }
     else
     {
@@ -314,7 +391,7 @@ uintptr_t FileDescriptor::getFd() const noexcept
     return impl->fd & (~socketFlag);
 }
 
-void FileDescriptor::open(std::string_view path, OFlag oflag)
+void FileDescriptor::open(std::string_view path, OFlag oflag, std::error_condition &condition)
 {
     assert(!impl);
     std::error_code ec;
@@ -327,6 +404,47 @@ void FileDescriptor::open(std::string_view path, OFlag oflag)
     impl->fd = fd;
 }
 
+void FileDescriptor::create(std::string_view path, OFlag oflag, std::error_condition &condition)
+{
+    assert(!impl);
+    std::error_code ec;
+    impl::fd_t fd = impl::create(path, oflag, ec);
+    if (ec)
+    {
+        HLT_CORE_WARN("error code: {}, message: {}", ec.value(), ec.message());
+        return;
+    }
+    impl = std::make_unique<Impl>();
+    impl->fd = fd;
+}
+
+int64_t FileDescriptor::lseek(int64_t offset, int whence, std::error_condition &condition)
+{
+    assert(impl);
+    std::error_code ec;
+    int64_t o = impl::lseek(impl->fd, offset, whence, ec);
+    if (!ec)
+    {
+        return o;
+    }
+    HLT_CORE_WARN("error code: {}, message: {}", ec.value(), ec.message());
+}
+
+void FileDescriptor::updatePosition(uint64_t position)
+{
+    assert(impl);
+#if HLT_PLATFORM == 64
+    impl->recvData.overlapped.Pointer = static_cast<LONGLONG>(position);
+    impl->sendData.overlapped.Pointer = static_cast<LONGLONG>(position);
+#elif HLT_PLATFORM == 32
+    LARGE_INTEGER pos = {.QuadPart = static_cast<LONGLONG>(position)};
+    impl->recvData.overlapped.Offset = pos.LowPart;
+    impl->recvData.overlapped.OffsetHigh = pos.HighPart;
+    impl->sendData.overlapped.Offset = pos.LowPart;
+    impl->sendData.overlapped.OffsetHigh = pos.HighPart;
+#endif
+}
+
 void FileDescriptor::bind(std::string_view localHost, int localPort)
 {
     assert(!impl);
@@ -334,6 +452,7 @@ void FileDescriptor::bind(std::string_view localHost, int localPort)
     impl::fd_t fd = impl::bind(localHost, localPort, ec);
     if (ec)
     {
+        HLT_CORE_WARN("error code: {}, message: {}", ec.value(), ec.message());
         return;
     }
     impl = std::make_unique<Impl>();

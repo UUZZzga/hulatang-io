@@ -12,7 +12,10 @@ Acceptor::Acceptor(EventLoop *_loop, std::string_view listenAddr, int port)
     acceptFd.bind(listenAddr, port);
 }
 
-Acceptor::~Acceptor() {}
+Acceptor::~Acceptor()
+{
+    // TODO 结束监听
+}
 
 void Acceptor::listen()
 {

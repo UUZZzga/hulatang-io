@@ -34,4 +34,11 @@
 #    define HLT_FUNC_DEF __PRETTY_FUNCTION__
 #endif
 
+#if defined(__LP64__) || defined(__LLP64__)
+#    define HLT_PLATFORM_64 1
+#    define HLT_PLATFORM 64
+#else
+#    define HLT_PLATFORM_32 1
+#    define HLT_PLATFORM 32
+#endif
 #endif // HULATANG_BASE_DEF_H

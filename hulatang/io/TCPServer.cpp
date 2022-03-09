@@ -34,7 +34,7 @@ void TCPServer::start()
 void TCPServer::newConnection(base::FileDescriptor fd, FdEventWatcherPtr watcher)
 {
     loop->assertInLoopThread();
-    auto wloop = watcher->getLoop();
+    auto *wloop = watcher->getLoop();
     TCPConnectionPtr conn(std::make_shared<TCPConnection>(wloop, watcher
         // , "", fd, localAddr, peerAddr
         ));

@@ -90,4 +90,5 @@ target("config")
     add_configfiles("hulatang/base/Config.h.in")
 
 includes("hulatang/base")
+includes("hulatang/file")
 includes("hulatang/io")

@@ -1,6 +1,6 @@
 #include "hulatang/io/TCPClient.hpp"
 
-#include "hulatang/io/TcpConnection.hpp"
+#include "hulatang/io/TCPConnection.hpp"
 #include <memory>
 
 namespace hulatang::io {
