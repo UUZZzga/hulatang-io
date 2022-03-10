@@ -8,6 +8,7 @@
 namespace hulatang::io {
 Acceptor::Acceptor(EventLoop *_loop, std::string_view listenAddr, int port)
     : loop(_loop)
+    , threadPool(nullptr)
 {
     acceptFd.bind(listenAddr, port);
 }

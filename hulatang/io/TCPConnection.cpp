@@ -10,11 +10,11 @@ TCPConnection::TCPConnection(EventLoop *_loop, const FdEventWatcherPtr &watcher)
 
 void TCPConnection::send(const base::Buf &buf)
 {
-    int expected = 0;
-    int desired = 1;
-    if (!sending.compare_exchange_strong(expected, desired))
+    int32_t expected = 0;
+    int32_t desired = 1;
+    while (!sending.compare_exchange_strong(expected, desired))
     {
-        abort();
+        expected = 0;
     }
     std::error_condition condition;
     channel->getFd().write(buf, condition);
@@ -22,7 +22,7 @@ void TCPConnection::send(const base::Buf &buf)
     {
         HLT_CORE_WARN("condition code{}, message{}", condition.value(), condition.message());
     }
-    sending.compare_exchange_strong(desired, expected);
+    sending.store(0);
 }
 
 void TCPConnection::shutdown() {}
