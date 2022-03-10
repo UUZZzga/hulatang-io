@@ -37,3 +37,11 @@ target("eventloopthreadpool_test")
 
     add_deps("hulatang_io")
     add_files("EventLoopThreadPool_test.cpp")
+
+target("inetaddress_test")
+    set_kind("binary")
+    set_default(false)
+    set_group("test")
+
+    add_deps("hulatang_io")
+    add_files("InetAddress_test.cpp")

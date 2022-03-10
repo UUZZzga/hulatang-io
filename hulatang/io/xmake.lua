@@ -10,6 +10,7 @@ local sources = {
     "FdEventManager.cpp",
     "IdleEventManager.cpp",
     "IdleEventWatcher.cpp",
+    "InetAddress.cpp",
     "InvokeTimer.cpp",
     "SocketChannel.cpp",
     "TCPClient.cpp",
