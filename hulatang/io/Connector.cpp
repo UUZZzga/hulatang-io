@@ -17,12 +17,11 @@ using std::chrono::operator""s;
 static constexpr std::chrono::milliseconds kInitRetryDelayMs = 500ms;
 static constexpr std::chrono::milliseconds kMaxRetryDelayMs = 30s;
 
-Connector::Connector(EventLoop *_loop, std::string_view _host, int _port)
+Connector::Connector(EventLoop *_loop, InetAddress &_address)
     : loop(_loop)
+    , address(_address)
     , retryDelay(kInitRetryDelayMs)
     , state(State::Disconnected)
-    , host(_host)
-    , port(_port)
 {}
 
 Connector::~Connector() = default;
@@ -40,7 +39,7 @@ void Connector::connect()
     watcher = std::make_shared<FdEventWatcher>(loop);
     loop->getFdEventManager().add(watcher, fd);
     std::error_condition ec;
-    fd.connect(host, port, ec);
+    fd.connect(address.sockaddr(), address.sockaddrLength(), ec);
     if (!ec)
     {
         connected();
@@ -78,7 +77,7 @@ void Connector::connected()
 void Connector::retry()
 {
     state = State::Disconnected;
-    HLT_CORE_INFO("Connector::retry - Retry connecting to {}:{} in {} milliseconds. ", host, port, retryDelay.count());
+    HLT_CORE_INFO("Connector::retry - Retry connecting to {} in {} milliseconds. ", address.toString(), retryDelay.count());
     loop->runAfter(retryDelay, [_this = shared_from_this()] { _this->startInLoop(); });
     retryDelay = ::min(retryDelay * 2, kMaxRetryDelayMs);
 }

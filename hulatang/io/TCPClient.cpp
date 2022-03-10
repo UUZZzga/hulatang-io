@@ -5,18 +5,17 @@
 
 namespace hulatang::io {
 
-TCPClient::TCPClient(EventLoop *_loop, std::string_view _host, int _port)
+TCPClient::TCPClient(EventLoop *_loop, InetAddress _address)
     : loop(_loop)
-    , connector(std::make_shared<Connector>(_loop, _host, _port))
-    , host(_host)
-    , port(_port)
+    , address(std::move(_address))
+    , connector(std::make_shared<Connector>(_loop, address))
 {
     connector->setNewConnectionCallback([&](base::FileDescriptor &fd, FdEventWatcherPtr watcher) { newConnection(fd, watcher); });
 }
 
 void TCPClient::connect()
 {
-    HLT_CORE_INFO("TCPClient::connect[{}] - connecting to {}:{}", "", host, port);
+    HLT_CORE_INFO("TCPClient::connect[{}] - connecting to {}", "", address.toString());
     connect_ = true;
     connector->start();
 }

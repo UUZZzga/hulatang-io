@@ -25,7 +25,7 @@ async def main():
 
     server = await loop.create_server(
         lambda: EchoServerProtocol(),
-        '127.0.0.1', 8080)
+        '127.0.0.1', 80)
 
     async with server:
         await server.serve_forever()

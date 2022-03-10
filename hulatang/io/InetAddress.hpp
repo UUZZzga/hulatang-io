@@ -34,19 +34,21 @@ public:
 
     void swap(InetAddress &other) noexcept
     {
-        std::swap(addr_, other.addr_);
-        std::swap(addrLen_, other.addrLen_);
+        std::swap(sockaddr_, other.sockaddr_);
+        std::swap(sockaddrLength_, other.sockaddrLength_);
     }
 
-    sockaddr *addr() const { return addr_; }
+    [[nodiscard]] sockaddr *sockaddr() const { return sockaddr_; }
 
-    size_t addrLen() const { return addrLen_; }
+    [[nodiscard]] size_t sockaddrLength() const { return sockaddrLength_; }
+
+    [[nodiscard]] std::string toString() const;
 
 private:
-    InetAddress(sockaddr *addr, size_t addrLen);
+    InetAddress(struct sockaddr *addr, size_t addrLen);
 
-    sockaddr *addr_{};
-    size_t addrLen_{};
+    struct sockaddr *sockaddr_{};
+    size_t sockaddrLength_{};
 };
 } // namespace hulatang::io
 

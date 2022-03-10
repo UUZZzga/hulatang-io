@@ -3,6 +3,7 @@
 
 #include "hulatang/base/Buf.hpp"
 #include "hulatang/io/Connector.hpp"
+#include "hulatang/io/InetAddress.hpp"
 #include "hulatang/io/TcpConnection.hpp"
 #include <memory>
 #include <mutex>
@@ -11,9 +12,9 @@ class TCPClient
 {
 public:
     using ConnectionCallback = std::function<void(const TCPConnectionPtr &)>;
-    using MessageCallback = std::function<void(const TCPConnectionPtr &,const base::Buf&)>;
+    using MessageCallback = std::function<void(const TCPConnectionPtr &, const base::Buf &)>;
 
-    TCPClient(EventLoop *_loop, std::string_view _host, int _port);
+    TCPClient(EventLoop *_loop, InetAddress _address);
 
     void connect();
     void disconnect();
@@ -35,13 +36,12 @@ private:
 
 private:
     EventLoop *loop;
+    InetAddress address;
     std::shared_ptr<Connector> connector;
     TCPConnectionPtr connection;
     std::mutex mutex;
-    std::string host;
     ConnectionCallback connectionCallback;
     MessageCallback messageCallback;
-    int port;
     bool connect_;
 };
 } // namespace hulatang::io

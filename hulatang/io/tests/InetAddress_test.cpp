@@ -12,7 +12,8 @@ int main(int _argc, const char **_argv)
 
     Log::init();
     InetAddress address{InetAddress::fromHostnameAndService("www.baidu.com", "https")};
-    HLT_INFO("{}", address.addrLen());
+    HLT_INFO("{}", address.sockaddrLength());
+    HLT_INFO("{}", address.toString());
 
     WSACleanup();
     return 0;
