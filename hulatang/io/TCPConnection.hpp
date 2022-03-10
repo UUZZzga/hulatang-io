@@ -4,6 +4,8 @@
 #include "hulatang/base/Buf.hpp"
 #include "hulatang/io/SocketChannel.hpp"
 
+#include <any>
+#include <array>
 #include <atomic>
 #include <memory>
 
@@ -17,6 +19,9 @@ public:
     using ConnectionCallback = std::function<void(const TCPConnectionPtr &)>;
     using MessageCallback = std::function<void(const TCPConnectionPtr &, const base::Buf &)>;
     using CloseCallback = std::function<void(const TCPConnectionPtr &)>;
+    using Context = std::any;
+    // msvc: sizeof(Context) == 64
+    static constexpr size_t ContextSize = 4;
 
     enum StateE
     {
@@ -76,15 +81,31 @@ public:
         return state == kConnected;
     }
 
+    const std::any &context(size_t index) const
+    {
+        return contexts.at(index);
+    }
+
+    std::any &context(size_t index)
+    {
+        return contexts.at(index);
+    }
+
+    void setContext(size_t index, std::any &&value)
+    {
+        contexts.at(index) = std::move(value);
+    }
+
 private:
     EventLoop *loop;
     SocketChannelPtr channel;
     FdEventWatcherPtr::weak_type watcherWPtr;
+    std::atomic_int32_t sending;
+    std::atomic<StateE> state;
     ConnectionCallback connectionCallback;
     MessageCallback messageCallback;
     CloseCallback closeCallback;
-    std::atomic_int32_t sending;
-    std::atomic<StateE> state;
+    std::array<Context, ContextSize> contexts;
 };
 } // namespace hulatang::io
 
