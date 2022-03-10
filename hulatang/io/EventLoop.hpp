@@ -1,6 +1,7 @@
 #ifndef HULATANG_IO_EVENTLOOP_HPP
 #define HULATANG_IO_EVENTLOOP_HPP
 
+#include "hulatang/base/def.h"
 #include "hulatang/io/CycleEventManager.hpp"
 #include "hulatang/io/IdleEventManager.hpp"
 #include "hulatang/io/Status.hpp"

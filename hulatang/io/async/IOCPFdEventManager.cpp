@@ -120,4 +120,9 @@ void IOCPFdEventManager::cancel(const FdEventWatcherPtr &watcher)
     FdEventManager::cancel(watcher);
     // disableAll();
 }
+
+void IOCPFdEventManager::wakeup()
+{
+    PostQueuedCompletionStatus(iocpHandle, WAKEUP_NUMBER, 0, nullptr);
+}
 } // namespace hulatang::io

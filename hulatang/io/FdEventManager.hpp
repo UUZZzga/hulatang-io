@@ -25,6 +25,8 @@ public:
 
     static std::unique_ptr<FdEventManager> create(EventLoop *loop);
 
+    virtual void wakeup();
+
 protected:
     EventLoop *loop;
     std::vector<FdEventWatcherPtr> watchers;

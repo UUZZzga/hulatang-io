@@ -34,11 +34,18 @@
 #    define HLT_FUNC_DEF __PRETTY_FUNCTION__
 #endif
 
-#if defined(__LP64__) || defined(__LLP64__)
-#    define HLT_PLATFORM_64 1
-#    define HLT_PLATFORM 64
+#if defined(_WIN32) || defined(_WIN64)
+#    define HLT_PLATFORM_WINDOWS 1
 #else
-#    define HLT_PLATFORM_32 1
-#    define HLT_PLATFORM 32
+#    error "Unknown host"
+#endif
+
+#if defined(__LP64__) || defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__) || defined(__64BIT__) || defined(__mips64) ||      \
+    defined(__powerpc64__) || defined(__ppc64__)
+#    define HLT_ARCH_64 1
+#    define HLT_ARCH 64
+#else
+#    define HLT_ARCH_32 1
+#    define HLT_ARCH 32
 #endif
 #endif // HULATANG_BASE_DEF_H

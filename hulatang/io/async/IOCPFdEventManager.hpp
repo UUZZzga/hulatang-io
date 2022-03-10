@@ -14,8 +14,10 @@ public:
 
     void process(microseconds blockTime) override;
 
-    void add(const FdEventWatcherPtr &watcher, const base::FileDescriptor& descriptor) override;
+    void add(const FdEventWatcherPtr &watcher, const base::FileDescriptor &descriptor) override;
     void cancel(const FdEventWatcherPtr &watcher) override;
+
+    void wakeup() override;
 
 private:
     HANDLE iocpHandle;

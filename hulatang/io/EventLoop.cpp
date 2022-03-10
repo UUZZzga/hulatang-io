@@ -189,7 +189,8 @@ void EventLoop::processCycle()
 
 void EventLoop::wakeup()
 {
-    // TODO
+    DLOG_TRACE;
+    fdEventManager->wakeup();
 }
 
 } // namespace hulatang::io

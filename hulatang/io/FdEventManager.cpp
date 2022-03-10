@@ -16,4 +16,6 @@ void FdEventManager::add(const FdEventWatcherPtr &watcher, const base::FileDescr
 {
     watchers.emplace_back(watcher);
 }
+
+void FdEventManager::wakeup() {}
 } // namespace hulatang::io
