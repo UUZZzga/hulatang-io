@@ -89,7 +89,7 @@ protected:
     EventLoop *loop;
     base::FileDescriptor &fd;
     DefaultCallback closeCallback;
-#if _WIN32
+#if defined(HLT_PLATFORM_WINDOWS)
     static constexpr size_t bufferSize = 4096;
     std::unique_ptr<char[]> buffer;
 #endif

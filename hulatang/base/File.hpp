@@ -1,6 +1,7 @@
 #ifndef HULATANG_BASE_FILE_HPP
 #define HULATANG_BASE_FILE_HPP
 
+#include "hulatang/base/def.h"
 #include "hulatang/base/Buf.hpp"
 #include <cstdint>
 #include <memory>
@@ -36,7 +37,7 @@ public:
     // lseek
     int64_t lseek(int64_t offset, int whence, std::error_condition &condition);
 
-#if _WIN32
+#if defined(HLT_PLATFORM_WINDOWS)
     void updatePosition(uint64_t position);
 #endif
 

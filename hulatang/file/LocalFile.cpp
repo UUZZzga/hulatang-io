@@ -1,5 +1,6 @@
 #include "hulatang/file/LocalFile.hpp"
 
+#include "hulatang/base/def.h"
 #include "hulatang/io/EventLoop.hpp"
 #include "hulatang/io/FdEventWatcher.hpp"
 #include <algorithm>
@@ -190,7 +191,7 @@ void LocalFile::onRead(void *data, size_t size)
 void LocalFile::onWrite(size_t size)
 {
     writing_ = false;
-    updatePosition(size); // TODO
+    updatePosition(size);
     writeCallback_();
 }
 
@@ -206,7 +207,7 @@ void LocalFile::onError(std::error_condition &ec)
 void LocalFile::updatePosition(size_t offset)
 {
     pos_ += offset;
-#if _WIN32
+#if defined(HLT_PLATFORM_WINDOWS)
     fd_.updatePosition(pos_);
 #endif
 }

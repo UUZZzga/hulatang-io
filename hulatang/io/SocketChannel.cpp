@@ -119,7 +119,7 @@ void SocketChannel::recvByteNum(char *buf, size_t num)
 
 void SocketChannel::update(int oldflag)
 {
-#if _WIN32
+#if defined (HLT_PLATFORM_WINDOWS)
     if (oldflag == 0 && (flags & kReadEvent) != 0)
     {
         std::error_condition condition;
