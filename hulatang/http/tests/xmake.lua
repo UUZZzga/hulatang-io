@@ -5,3 +5,11 @@ target("url_test")
 
     add_deps("hulatang_http")
     add_files("URL_test.cpp")
+
+target("httpclient_test")
+    set_kind("binary")
+    set_default(false)
+    set_group("test")
+
+    add_deps("hulatang_http")
+    add_files("HttpClient_test.cpp")

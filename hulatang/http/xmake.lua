@@ -1,4 +1,6 @@
 local sources = {
+    "HttpClient.cpp",
+    "HttpRequest.cpp",
     "URL.cpp"
 }
 
