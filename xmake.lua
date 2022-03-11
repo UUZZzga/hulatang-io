@@ -15,6 +15,9 @@ add_requires("spdlog 1.9.2", {system = false, configs = {fmt_external = true}})
 add_requires("backward-cpp v1.6") -- 堆栈跟踪
 add_requires("concurrentqueue")
 
+-- 第三方依赖
+add_includedirs("3rdparty/magic_enum-0.7.3/include")
+
 set_warnings("all")
 
 -- 关闭警告
