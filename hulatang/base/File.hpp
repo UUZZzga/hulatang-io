@@ -8,6 +8,8 @@
 #include <string_view>
 #include <system_error>
 
+struct sockaddr;
+
 namespace hulatang::base {
 enum OFlag
 {
@@ -52,7 +54,7 @@ public:
     void accept(FileDescriptor &fd, std::error_condition &condition);
 
     // connect to remote
-    void connect(std::string_view peerHost, int peerPort, std::error_condition &condition) noexcept;
+    void connect(sockaddr *addr, size_t len, std::error_condition &condition) noexcept;
 
     void read(const Buf &buf, std::error_condition &condition) noexcept;
 

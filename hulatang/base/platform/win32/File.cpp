@@ -255,22 +255,11 @@ void accept(fd_t listen, fd_t &accept, char *buf, IO_DATA &data, std::error_code
     }
 }
 
-void connect(fd_t fd, std::string_view peerHost, int peerPort, IO_DATA &data, std::error_code &ec) noexcept
+void connect(fd_t fd, sockaddr *addr, size_t len, IO_DATA &data, std::error_code &ec) noexcept
 {
     assert(INVALID_SOCKET != fd);
     assert(fd & socketFlag);
     fd = fd & (~socketFlag);
-    int addrSize = 0;
-
-    sockaddr_u peerAddr = getSockaddr(peerHost, peerPort, ec);
-    if (peerAddr.sa.sa_family == AF_INET)
-    {
-        addrSize = sizeof(sockaddr_in);
-    }
-    else if (peerAddr.sa.sa_family == AF_INET6)
-    {
-        addrSize = sizeof(sockaddr_in6);
-    }
 
     LPFN_CONNECTEX ConnectEx = nullptr;
     DWORD dwBytes = 0;
@@ -282,10 +271,9 @@ void connect(fd_t fd, std::string_view peerHost, int peerPort, IO_DATA &data, st
         return;
     }
 
-    if (ConnectEx(fd, &peerAddr.sa, addrSize, nullptr, 0, nullptr, &data.overlapped) == FALSE)
+    if (ConnectEx(fd, addr, static_cast<int>(len), nullptr, 0, nullptr, &data.overlapped) == FALSE)
     {
         ec = make_win32_error_code(WSAGetLastError());
-        return;
     }
     data.operationType = hulatang::base::Type::OPEN;
 }
@@ -428,15 +416,16 @@ int64_t FileDescriptor::lseek(int64_t offset, int whence, std::error_condition &
         return o;
     }
     HLT_CORE_WARN("error code: {}, message: {}", ec.value(), ec.message());
+    return -1;
 }
 
 void FileDescriptor::updatePosition(uint64_t position)
 {
     assert(impl);
-#if HLT_PLATFORM == 64
-    impl->recvData.overlapped.Pointer = static_cast<LONGLONG>(position);
-    impl->sendData.overlapped.Pointer = static_cast<LONGLONG>(position);
-#elif HLT_PLATFORM == 32
+#if HLT_ARCH == 64
+    impl->recvData.overlapped.Pointer = reinterpret_cast<PVOID>(position);
+    impl->sendData.overlapped.Pointer = reinterpret_cast<PVOID>(position);
+#elif HLT_ARCH == 32
     LARGE_INTEGER pos = {.QuadPart = static_cast<LONGLONG>(position)};
     impl->recvData.overlapped.Offset = pos.LowPart;
     impl->recvData.overlapped.OffsetHigh = pos.HighPart;
@@ -490,12 +479,12 @@ void FileDescriptor::accept(FileDescriptor &fd, std::error_condition &condition)
     fd.impl.reset();
 }
 
-void FileDescriptor::connect(std::string_view peerHost, int peerPort, std::error_condition &condition) noexcept
+void FileDescriptor::connect(sockaddr *addr, size_t len, std::error_condition &condition) noexcept
 {
     assert(impl);
 
     std::error_code ec;
-    impl::connect(impl->fd, peerHost, peerPort, impl->recvData, ec);
+    impl::connect(impl->fd, addr, len, impl->recvData, ec);
     if (!ec)
     {
         return;
@@ -508,6 +497,7 @@ void FileDescriptor::connect(std::string_view peerHost, int peerPort, std::error
         return;
     }
     HLT_CORE_WARN("error code: {}, message: {}", ec.value(), ec.message());
+    impl->recvData.operationType = Type::NONE;
 }
 
 void FileDescriptor::read(const Buf &buf, std::error_condition &condition) noexcept
@@ -525,6 +515,7 @@ void FileDescriptor::read(const Buf &buf, std::error_condition &condition) noexc
         return;
     }
     HLT_CORE_WARN("error code: {}, message: {}", ec.value(), ec.message());
+    impl->recvData.operationType = Type::NONE;
 }
 
 void FileDescriptor::write(const Buf &buf, std::error_condition &condition) noexcept
@@ -541,6 +532,7 @@ void FileDescriptor::write(const Buf &buf, std::error_condition &condition) noex
         return;
     }
     HLT_CORE_WARN("error code: {}, message: {}", ec.value(), ec.message());
+    impl->sendData.operationType = Type::NONE;
 }
 
 void FileDescriptor::close() noexcept
