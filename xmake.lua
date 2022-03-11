@@ -20,6 +20,8 @@ set_warnings("all")
 -- 关闭警告
 if is_plat("windows") then
     add_cxxflags("/wd4819")
+    add_cflags("/utf-8")
+    add_cxxflags("/utf-8")
 end
 
 -- 配置模式行为
@@ -91,4 +93,5 @@ target("config")
 
 includes("hulatang/base")
 includes("hulatang/file")
+includes("hulatang/http")
 includes("hulatang/io")
