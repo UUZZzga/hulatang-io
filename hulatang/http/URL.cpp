@@ -64,6 +64,7 @@ URL::URL(std::string url)
 
 void URL::split()
 {
+    //TODO 错误码
     std::string_view url{url_};
     auto i = url.find(':');
     if (tryHostPort(url, i))

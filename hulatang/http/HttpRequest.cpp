@@ -8,7 +8,7 @@
 namespace hulatang::http {
 HttpRequest::HttpRequest()
     : method_(INVALID)
-    , version_(kUnknown)
+    , version_(Version::Unknown)
     , headers_(std::make_unique<HeaderMap>())
 {}
 
@@ -51,33 +51,13 @@ void HttpRequest::swap(HttpRequest &that) noexcept
 
 std::string_view HttpRequest::versionString() const
 {
-    if (version_ == kHttp10)
-    {
-        return "HTTP/1.0";
-    }
-    if (version_ == kHttp11)
-    {
-
-        return "HTTP/1.1";
-    }
-    throw std::runtime_error("Unknown");
+    return to_string(version_);
 }
 
 bool HttpRequest::setVersionFromString(std::string_view version)
 {
-    if (version == "HTTP/1.0")
-    {
-        version_ = kHttp10;
-    }
-    else if (version == "HTTP/1.1")
-    {
-        version_ = kHttp11;
-    }
-    else
-    {
-        version_ = kUnknown;
-    }
-    return version_ != kUnknown;
+    version_ = VersionFromString(version);
+    return version_ != Version::Unknown;
 }
 
 std::string_view HttpRequest::methodString() const

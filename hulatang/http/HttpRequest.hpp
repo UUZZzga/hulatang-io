@@ -1,6 +1,8 @@
 #ifndef HULATANG_HTTP_HTTPREQUEST_HPP
 #define HULATANG_HTTP_HTTPREQUEST_HPP
 
+#include "hulatang/http/HttpConstant.hpp"
+
 #include <chrono>
 #include <memory>
 #include <string>
@@ -21,12 +23,6 @@ public:
         HEAD,
         PUT,
         DELETE
-    };
-    enum Version
-    {
-        kUnknown,
-        kHttp10,
-        kHttp11
     };
 
     HttpRequest();

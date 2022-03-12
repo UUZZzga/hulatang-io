@@ -20,7 +20,7 @@ void HttpClient::get(std::string_view urlStr, RequestCallback cb)
     URL url(urlStr);
     HttpRequest request;
     request.setPath(url.path());
-    request.setVersion(HttpRequest::Version::kHttp11);
+    request.setVersion(Version::Http11);
     request.setMethod(HttpRequest::Method::GET);
     request.addHeader("Host", url.host());
     request.addHeader("Accept", "application/json");
@@ -48,7 +48,8 @@ void HttpClient::get(const URL &url, const HttpRequest &req, RequestCallback cb)
 
     base::OutputStream out(&writeBuffer_);
     out << req;
-    HLT_TRACE("{}", writeBuffer_.toString_view());
+    HLT_CORE_TRACE("{}", writeBuffer_.toString_view());
+    requestCallback_ = cb;
     loop_->queueInLoop([this] { client_->connect(); });
 }
 
@@ -63,7 +64,16 @@ void HttpClient::onConnection(const TCPConnectionPtr &conn)
 
 void HttpClient::onMessage(const TCPConnectionPtr &conn, const base::Buf &buf)
 {
-    HLT_TRACE("{}", std::string_view{buf.buf, buf.len});
+    readBuffer_.append(buf.buf, buf.len);
+    HLT_CORE_TRACE("{}", readBuffer_.toString_view());
+    std::error_condition ec;
+    HttpResponse response = HttpResponse::buildFromBuffer(readBuffer_, ec);
+    if (ec)
+    {
+        HLT_CORE_WARN("HttpClient error: {}", ec.value());
+        return;
+    }
+    requestCallback_(response);
 }
 
 } // namespace hulatang::http

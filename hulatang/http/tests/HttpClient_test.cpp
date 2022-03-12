@@ -17,8 +17,8 @@ int main(int _argc, const char **_argv)
     Log::init();
     EventLoop loop;
     HttpClient clinet(&loop);
-    clinet.get("http://localhost:8080/buiding/queryAll", [](auto) {
-
+    clinet.get("http://localhost:8080/buiding/queryAll", [](auto &res) {
+        HLT_INFO("{}", res.body());
     });
 
     loop.run();

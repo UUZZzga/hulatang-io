@@ -36,7 +36,7 @@ private:
     std::unique_ptr<TCPClient> client_;
     base::Buffer readBuffer_;
     base::Buffer writeBuffer_;
-    HttpRequest request;
+    RequestCallback requestCallback_;
 };
 } // namespace hulatang::http
 
