@@ -2,15 +2,16 @@
 #include "hulatang/io/Status.hpp"
 #include <mutex>
 #include <thread>
+#include <utility>
 
 namespace hulatang::io {
 using status::EnumEventLoopStatus;
 using std::chrono::operator""ms;
 
-EventLoopThread::EventLoopThread(const ThreadInitCallback &cb, std::string_view name)
+EventLoopThread::EventLoopThread(ThreadInitCallback cb, std::string_view name)
     : loop_(nullptr)
     , name_(name)
-    , callback_(cb)
+    , callback_(std::move(cb))
 {
     status.store(EnumEventLoopStatus::Stopped);
 }

@@ -14,7 +14,7 @@ class EventLoopThread
 public:
     using ThreadInitCallback = std::function<void(EventLoop *)>;
 
-    EventLoopThread(const ThreadInitCallback &cb, std::string_view name);
+    EventLoopThread(ThreadInitCallback cb, std::string_view name);
 
     ~EventLoopThread();
 
