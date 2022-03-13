@@ -64,7 +64,7 @@ URL::URL(std::string url)
 
 void URL::split()
 {
-    //TODO 错误码
+    // TODO 错误码
     std::string_view url{url_};
     auto i = url.find(':');
     if (tryHostPort(url, i))
@@ -80,8 +80,18 @@ void URL::split()
         size_t set[3] = {'/', '?', '#'};
         std::transform(std::begin(set), std::end(set), std::begin(set), [&](size_t c) { return url.find(static_cast<char>(c), 2); });
         auto *i = std::min_element(std::begin(set), std::end(set));
-        auto hostport = url.substr(2, *i - 2);
-        url = url.substr(*i);
+        std::string_view hostport;
+        if (*i == npos)
+        {
+            hostport = url.substr(2);
+            url = std::string_view{};
+        }
+        else
+        {
+            hostport = url.substr(2, *i - 2);
+            url = url.substr(*i);
+        }
+
         auto colonIndex = hostport.find_last_of(':');
         if (colonIndex != npos && !tryHostPort(hostport, colonIndex))
         {

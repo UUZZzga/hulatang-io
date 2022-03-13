@@ -35,7 +35,7 @@ void Connector::stop() {}
 
 void Connector::connect()
 {
-    fd.bind("localhost", 0);
+    fd.bind("0.0.0.0", 0);
     watcher = std::make_shared<FdEventWatcher>(loop);
     loop->getFdEventManager().add(watcher, fd);
     std::error_condition ec;
