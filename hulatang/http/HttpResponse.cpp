@@ -148,12 +148,12 @@ struct HttpResponseBuilder
     void contentLength(size_t len)
     {
         // TODO 还未实现
-        if (readNumber + len < buf->readableBytes())
+        if (buf->readableBytes() < readNumber + len + 2)
         {
             // 还没读完
             return;
         }
-        buf->retrieve(readNumber);
+        buf->retrieve(readNumber + 2);
         body = buf->retrieveAsString(len);
         code = NoError;
         HLT_CORE_TRACE("{}", body);

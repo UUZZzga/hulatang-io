@@ -101,7 +101,8 @@ void HttpRequest::setPath(std::string_view path)
 
 std::ostream &operator<<(std::ostream &out, const HttpRequest &request)
 {
-    out << magic_enum::enum_name(request.method()) << " " << request.path() << " " << request.versionString() << "\r\n";
+    out << magic_enum::enum_name(request.method()) << " " << (request.path().empty() ? "/" : request.path()) << " "
+        << request.versionString() << "\r\n";
     for (const auto &header : request.headers())
     {
         out << header.first << ":" << header.second << "\r\n";
