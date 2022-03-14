@@ -2,9 +2,10 @@
 #include "hulatang/base/Buf.hpp"
 
 namespace hulatang::io {
-TCPConnection::TCPConnection(EventLoop *_loop, const FdEventWatcherPtr &watcher)
+TCPConnection::TCPConnection(EventLoop *_loop, const FdEventWatcherPtr &watcher, InetAddress peerAddr)
     : loop(_loop)
     , watcherWPtr(watcher)
+    , peerAddr(std::move(peerAddr))
     , state(kConnecting)
 {}
 

@@ -13,8 +13,9 @@ TCPServer::TCPServer(EventLoop *_loop, std::string_view listenAddr, int port)
     , pool(std::make_unique<EventLoopThreadPool>(loop, "TCPServer"))
     , acceptor(_loop, listenAddr, port)
 {
-    acceptor.setNewConnectionCallback(
-        [this](auto &&PH1, auto &&PH2) { newConnection(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2)); });
+    acceptor.setNewConnectionCallback([this](auto &&PH1, auto &&PH2, auto &&PH3) {
+        newConnection(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2), std::forward<decltype(PH3)>(PH3));
+    });
 }
 
 void TCPServer::setThreadNum(int numThreads)
@@ -31,11 +32,13 @@ void TCPServer::start()
     });
 }
 
-void TCPServer::newConnection(base::FileDescriptor fd, FdEventWatcherPtr watcher)
+void TCPServer::newConnection(base::FileDescriptor fd, FdEventWatcherPtr watcher, InetAddress addr)
 {
     loop->assertInLoopThread();
+    assert(fd.getFd());
+    HLT_CORE_INFO("TcpServer::newConnection [{}] - connection ", addr.toString());
     auto *wloop = watcher->getLoop();
-    TCPConnectionPtr conn(std::make_shared<TCPConnection>(wloop, watcher
+    TCPConnectionPtr conn(std::make_shared<TCPConnection>(wloop, watcher, std::move(addr)
         // , "", fd, localAddr, peerAddr
         ));
     conn->setConnectionCallback(connectionCallback);

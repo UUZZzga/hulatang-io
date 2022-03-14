@@ -2,6 +2,7 @@
 #define HULATANG_IO_TCPCONNECTION_HPP
 
 #include "hulatang/base/Buf.hpp"
+#include "hulatang/io/InetAddress.hpp"
 #include "hulatang/io/SocketChannel.hpp"
 
 #include <any>
@@ -31,7 +32,7 @@ public:
         kDisconnected,
     };
 
-    TCPConnection(EventLoop *_loop, const FdEventWatcherPtr &watcher);
+    TCPConnection(EventLoop *_loop, const FdEventWatcherPtr &watcher, InetAddress peerAddr);
 
     void send(const base::Buf &buf);
 
@@ -96,10 +97,13 @@ public:
         contexts.at(index) = std::move(value);
     }
 
+    const InetAddress& getPeerAddr() const { return peerAddr; }
+
 private:
     EventLoop *loop;
     SocketChannelPtr channel;
     FdEventWatcherPtr::weak_type watcherWPtr;
+    InetAddress peerAddr;
     std::atomic_int32_t sending;
     std::atomic<StateE> state;
     ConnectionCallback connectionCallback;

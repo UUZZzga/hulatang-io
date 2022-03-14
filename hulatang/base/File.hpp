@@ -62,6 +62,9 @@ public:
 
     void close() noexcept;
 
+    const sockaddr *peeraddr();
+    size_t peeraddrLength();
+
 private:
     struct Impl;
     std::unique_ptr<Impl> impl;

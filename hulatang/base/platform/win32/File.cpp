@@ -21,6 +21,8 @@ using hulatang::base::OFlag;
 constexpr uintptr_t socketFlag = 1ULL << 63;
 
 namespace impl {
+constexpr int addrLen = sizeof(sockaddr_in) + 16; // TODO 没有支持ipv6
+
 using hulatang::base::fd_t;
 using hulatang::base::FdNull;
 using hulatang::base::IO_DATA;
@@ -241,7 +243,6 @@ void accept(fd_t listen, fd_t &accept, char *buf, IO_DATA &data, std::error_code
             ec = make_win32_error_code(WSAGetLastError());
             return;
         }
-        int addrLen = sizeof(sockaddr_in) + 16; // TODO 没有支持ipv6
         if (AcceptEx(listen, accept, buf, 0, addrLen, addrLen, &dwBytes, &data.overlapped) == FALSE)
         {
             ec = make_win32_error_code(WSAGetLastError());
@@ -551,6 +552,17 @@ void FileDescriptor::close() noexcept
 
     impl::close(impl->fd);
     impl.reset();
+}
+
+const sockaddr *FileDescriptor::peeraddr()
+{
+    assert(impl);
+    return reinterpret_cast<const sockaddr *>(impl->lpOutputBuf + impl::addrLen);
+}
+
+size_t FileDescriptor::peeraddrLength()
+{
+    return sizeof(sockaddr_in);
 }
 
 } // namespace hulatang::base

@@ -35,7 +35,7 @@ public:
     void start();
 
 private:
-    void newConnection(base::FileDescriptor fd, FdEventWatcherPtr watcher);
+    void newConnection(base::FileDescriptor fd, FdEventWatcherPtr watcher, InetAddress addr);
 
     void removeConnection(const TCPConnectionPtr &conn);
 

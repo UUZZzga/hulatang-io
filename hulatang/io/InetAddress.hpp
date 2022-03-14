@@ -29,6 +29,7 @@ public:
     InetAddress(const InetAddress &other) = delete;
     InetAddress &operator=(const InetAddress &other) = delete;
 
+    static InetAddress copyFromNative(const struct sockaddr *addr, size_t addrLen);
     static InetAddress fromHostnameAndService(const std::string &host, const std::string &service, bool mandatoryIPv4 = true);
     static InetAddress fromHostnameAndPort(const std::string &host, uint16_t port, bool mandatoryIPv4 = true, bool tcp = true);
 

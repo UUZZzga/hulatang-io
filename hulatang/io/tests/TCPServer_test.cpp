@@ -23,11 +23,11 @@ int main(int _argc, const char **_argv)
     server.setConnectionCallback([](const auto &conn) {
         if (conn->isConnected())
         {
-            HLT_INFO("new conn");
+            HLT_INFO("new conn - {}", conn->getPeerAddr().toString());
         }
         else
         {
-            HLT_INFO("des conn");
+            HLT_INFO("des conn - {}", conn->getPeerAddr().toString());
         }
     });
     server.setMessageCallback([](const auto &conn, const auto &buf) -> void {

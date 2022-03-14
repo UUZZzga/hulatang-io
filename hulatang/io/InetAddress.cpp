@@ -71,6 +71,13 @@ InetAddress::~InetAddress() noexcept
     freeSocketAddress(sockaddr_, sockaddrLength_);
 }
 
+InetAddress InetAddress::copyFromNative(const struct sockaddr *addr, size_t addrLen)
+{
+    struct sockaddr *sa = allocSocketAddress(addrLen);
+    copySocketAddress(addr, sa, addrLen);
+    return {sa, addrLen};
+}
+
 // 为什么不适用 string_view: 因为string_view 不保证c风格str，也就是'\0'结尾
 InetAddress InetAddress::fromHostnameAndService(const std::string &host, const std::string &service, bool mandatoryIPv4)
 {

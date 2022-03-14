@@ -3,6 +3,7 @@
 
 #include "hulatang/base/File.hpp"
 #include "hulatang/io/FdEventWatcher.hpp"
+#include "hulatang/io/InetAddress.hpp"
 
 #include <functional>
 #include <string_view>
@@ -13,7 +14,7 @@ class EventLoopThreadPool;
 class Acceptor
 {
 public:
-    using NewConnectionCallback = std::function<void(base::FileDescriptor, FdEventWatcherPtr)>;
+    using NewConnectionCallback = std::function<void(base::FileDescriptor, FdEventWatcherPtr, InetAddress)>;
     Acceptor(EventLoop *_loop, std::string_view listenAddr, int port);
     ~Acceptor();
 

@@ -1,7 +1,7 @@
-#include "hulatang/base/File.hpp"
-#include "hulatang/base/Log.hpp"
 #include "hulatang/io/Acceptor.hpp"
 
+#include "hulatang/base/File.hpp"
+#include "hulatang/base/Log.hpp"
 #include "hulatang/io/EventLoop.hpp"
 #include "hulatang/io/EventLoopThreadPool.hpp"
 
@@ -51,7 +51,8 @@ void Acceptor::acceptInLoop()
     nextLoop->getFdEventManager().add(watcher, newFd);
     watcher->setCloseHandler([nextLoop, watcher] { nextLoop->getFdEventManager().cancel(watcher); });
 
-    newConnectionCallback(base::FileDescriptor{std::move(newFd)}, watcher);
+    newConnectionCallback(
+        base::FileDescriptor{std::move(newFd)}, watcher, InetAddress::copyFromNative(acceptFd.peeraddr(), acceptFd.peeraddrLength()));
     acceptFd.accept(newFd, condition);
 }
 } // namespace hulatang::io
