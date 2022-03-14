@@ -14,7 +14,7 @@ namespace hulatang::io {
 class Connector : public std::enable_shared_from_this<Connector>
 {
 public:
-    using NewConnectionCallback = std::function<void(base::FileDescriptor &, FdEventWatcherPtr)>;
+    using NewConnectionCallback = std::function<void(base::FileDescriptor &&, FdEventWatcherPtr)>;
 
     Connector(EventLoop *_loop, InetAddress &_address);
     ~Connector();

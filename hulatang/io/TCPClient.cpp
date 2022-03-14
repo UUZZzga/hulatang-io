@@ -10,7 +10,7 @@ TCPClient::TCPClient(EventLoop *_loop, InetAddress _address)
     , address(std::move(_address))
     , connector(std::make_shared<Connector>(_loop, address))
 {
-    connector->setNewConnectionCallback([&](base::FileDescriptor &fd, FdEventWatcherPtr watcher) { newConnection(fd, watcher); });
+    connector->setNewConnectionCallback([&](base::FileDescriptor &&fd, FdEventWatcherPtr watcher) { newConnection(std::move(fd), watcher); });
 }
 
 void TCPClient::connect()
@@ -25,7 +25,7 @@ void TCPClient::stop()
     connector->stop();
 }
 
-void TCPClient::newConnection(base::FileDescriptor &fd, FdEventWatcherPtr watcher)
+void TCPClient::newConnection(base::FileDescriptor &&fd, FdEventWatcherPtr watcher)
 {
     loop->assertInLoopThread();
     TCPConnectionPtr conn(
@@ -39,7 +39,7 @@ void TCPClient::newConnection(base::FileDescriptor &fd, FdEventWatcherPtr watche
         std::lock_guard lock(mutex);
         connection = conn;
     }
-    conn->connectEstablished(fd);
+    conn->connectEstablished(std::move(fd));
 }
 
 void TCPClient::removeConnection(const TCPConnectionPtr &conn)

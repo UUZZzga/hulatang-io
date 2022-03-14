@@ -43,7 +43,7 @@ public:
     void stopRead();
 
     // called when TcpServer accepts a new connection
-    void connectEstablished(base::FileDescriptor &fd); // should be called only once
+    void connectEstablished(base::FileDescriptor &&fd); // should be called only once
     // called when TcpServer has removed me from its map
     void connectDestroyed(); // should be called only once
 

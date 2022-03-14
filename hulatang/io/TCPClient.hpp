@@ -31,7 +31,7 @@ public:
     }
 
 private:
-    void newConnection(base::FileDescriptor &fd, FdEventWatcherPtr watcher);
+    void newConnection(base::FileDescriptor &&fd, FdEventWatcherPtr watcher);
     void removeConnection(const TCPConnectionPtr &conn);
 
 private:

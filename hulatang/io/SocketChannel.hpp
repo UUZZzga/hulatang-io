@@ -21,7 +21,7 @@ public:
     typedef std::function<void(const base::Buf &)> MessageCallback;
 
 public:
-    SocketChannel(EventLoop *loop, base::FileDescriptor &fd, FdEventWatcherPtr _watcher);
+    SocketChannel(EventLoop *loop, base::FileDescriptor &&fd, FdEventWatcherPtr _watcher);
 
     ~SocketChannel() override;
 

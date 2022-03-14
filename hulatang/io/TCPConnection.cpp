@@ -28,7 +28,7 @@ void TCPConnection::send(const base::Buf &buf)
 
 void TCPConnection::shutdown() {}
 
-void TCPConnection::connectEstablished(base::FileDescriptor &fd)
+void TCPConnection::connectEstablished(base::FileDescriptor &&fd)
 {
     loop->assertInLoopThread();
     assert(state == kConnecting);
@@ -37,7 +37,7 @@ void TCPConnection::connectEstablished(base::FileDescriptor &fd)
     assert(!watcherWPtr.expired());
     auto conn = shared_from_this();
     FdEventWatcherPtr watcher = watcherWPtr.lock();
-    channel = std::make_shared<SocketChannel>(loop, fd, watcher);
+    channel = std::make_shared<SocketChannel>(loop, std::move(fd), watcher);
     channel->setConnectionCallback([_this = conn](auto &) { _this->connectDestroyed(); });
     channel->setMessageCallback([_this = conn](const base::Buf &buf) { _this->messageCallback(_this, buf); });
 
@@ -56,7 +56,9 @@ void TCPConnection::connectDestroyed()
         setState(kDisconnected);
         channel->disableAll();
 
-        connectionCallback(shared_from_this());
+        auto ptr = shared_from_this();
+        connectionCallback(ptr);
+        closeCallback(ptr);
     }
     // channel->remove();
 }

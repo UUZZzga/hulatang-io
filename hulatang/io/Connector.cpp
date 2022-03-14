@@ -71,7 +71,7 @@ void Connector::connecting()
 void Connector::connected()
 {
     state = State::Connected;
-    newConnectionCallback(fd, watcher);
+    newConnectionCallback(std::move(fd), watcher);
 }
 
 void Connector::retry()

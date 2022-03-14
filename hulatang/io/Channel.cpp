@@ -2,9 +2,9 @@
 
 namespace hulatang::io {
 
-Channel::Channel(EventLoop *loop, base::FileDescriptor &fd)
+Channel::Channel(EventLoop *loop, base::FileDescriptor &&fd)
     : loop(loop)
-    , fd(fd)
+    , fd(std::move(fd))
     , buffer(new char[bufferSize])
     , flags(kNoneEvent)
 {}

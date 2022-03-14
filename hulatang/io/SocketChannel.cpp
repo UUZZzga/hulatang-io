@@ -4,8 +4,8 @@
 
 namespace hulatang::io {
 
-SocketChannel::SocketChannel(EventLoop *loop, base::FileDescriptor &fd, FdEventWatcherPtr _watcher)
-    : Channel(loop, fd)
+SocketChannel::SocketChannel(EventLoop *loop, base::FileDescriptor &&fd, FdEventWatcherPtr _watcher)
+    : Channel(loop, std::move(fd))
     , watcher(_watcher)
     , triggerByteNum(0)
     , waitSendByteNum(0)

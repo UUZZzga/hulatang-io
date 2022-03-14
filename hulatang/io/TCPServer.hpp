@@ -44,7 +44,7 @@ private:
     MessageCallback messageCallback;
     EventLoop *loop;
     std::unique_ptr<EventLoopThreadPool> pool;
-    std::unordered_map<std::string, std::tuple<TCPConnectionPtr, base::FileDescriptor>> map;
+    std::unordered_map<std::string, TCPConnectionPtr> map;
     Acceptor acceptor;
 };
 } // namespace hulatang::io

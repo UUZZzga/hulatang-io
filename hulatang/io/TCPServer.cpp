@@ -2,6 +2,7 @@
 #include "hulatang/base/File.hpp"
 #include "hulatang/io/EventLoopThreadPool.hpp"
 
+#include <functional>
 #include <memory>
 #include <tuple>
 #include <utility>
@@ -44,18 +45,20 @@ void TCPServer::newConnection(base::FileDescriptor fd, FdEventWatcherPtr watcher
     conn->setConnectionCallback(connectionCallback);
     conn->setMessageCallback(messageCallback);
     conn->setCloseCallback([&](const auto &conn) { removeConnection(conn); });
-    auto key = "" + std::to_string(fd.getFd()); // TODO conn name
-    auto it = map.emplace(key, std::make_tuple(conn, std::move(fd)));
-    wloop->runInLoop([conn, fd = &std::get<base::FileDescriptor>(it.first->second)] { conn->connectEstablished(*fd); });
+    auto key = conn->getPeerAddr().toString();
+    auto it = map.emplace(key, conn);
+    auto fdPtr = std::make_shared<base::FileDescriptor>(std::move(fd));
+    wloop->runInLoop([conn, fd{fdPtr}]() mutable { conn->connectEstablished(std::move(*fd)); });
 }
 
 void TCPServer::removeConnection(const TCPConnectionPtr &conn)
 {
     loop->runInLoop([this, conn] {
         loop->assertInLoopThread();
-        // LOG_INFO << "TcpServer::removeConnectionInLoop [" << name_ << "] - connection " << conn->name();
-        // size_t n = connections_.erase(conn->name()); // TODO conn name
-        // assert(n == 1);
+        auto addr = conn->getPeerAddr().toString();
+        HLT_CORE_INFO("TcpServer::removeConnectionInLoop [{}] - connection", addr);
+        size_t n = map.erase(addr);
+        assert(n == 1);
         EventLoop *ioLoop = conn->getLoop();
         ioLoop->queueInLoop([conn] { conn->connectDestroyed(); });
     });

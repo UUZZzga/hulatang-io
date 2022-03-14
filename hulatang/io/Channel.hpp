@@ -19,7 +19,7 @@ public:
     using DefaultCallback = std::function<void(const std::shared_ptr<Channel> &)>;
 
 public:
-    explicit Channel(EventLoop *loop, base::FileDescriptor &fd);
+    explicit Channel(EventLoop *loop, base::FileDescriptor &&fd);
     virtual ~Channel() = default;
 
     EventLoop *getLoop()
@@ -87,7 +87,7 @@ public:
 
 protected:
     EventLoop *loop;
-    base::FileDescriptor &fd;
+    base::FileDescriptor fd;
     DefaultCallback closeCallback;
 #if defined(HLT_PLATFORM_WINDOWS)
     static constexpr size_t bufferSize = 4096;

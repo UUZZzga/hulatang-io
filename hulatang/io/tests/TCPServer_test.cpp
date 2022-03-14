@@ -31,7 +31,7 @@ int main(int _argc, const char **_argv)
         }
     });
     server.setMessageCallback([](const auto &conn, const auto &buf) -> void {
-        HLT_INFO("{}", std::string_view(buf.buf, buf.len));
+        HLT_INFO("message {} - {}", conn->getPeerAddr().toString(), std::string_view(buf.buf, buf.len));
         conn->send(buf);
     });
 
