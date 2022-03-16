@@ -37,12 +37,12 @@ IOCPFdEventManager::~IOCPFdEventManager()
 void IOCPFdEventManager::process(microseconds blockTime)
 {
     microseconds currentTime = loop->getCurrentTime();
-    microseconds timeout = currentTime + blockTime;
-    int num = 0;
+    microseconds timeout = loop->getCurrentTime() + blockTime;
+
     ULONG_PTR ptr = 0;
     DWORD bytes = 0;
     LPOVERLAPPED pOverlapped = nullptr;
-    for (; currentTime < timeout; ++num)
+    for (; currentTime < timeout; loop->updateTime(), currentTime = loop->getCurrentTime())
     {
         auto iocpBlockMs = std::chrono::duration_cast<std::chrono::milliseconds>(timeout - currentTime).count();
         BOOL bRet = GetQueuedCompletionStatus(iocpHandle, &bytes, &ptr, &pOverlapped, iocpBlockMs);
@@ -105,7 +105,6 @@ void IOCPFdEventManager::process(microseconds blockTime)
             HLT_CORE_ERROR("未知错误");
         }
         };
-        loop->updateTime();
     }
 }
 
