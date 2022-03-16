@@ -1,4 +1,4 @@
-add_rules("mode.debug", "mode.release")
+add_rules("mode.debug", "mode.release", "mode.releasedbg")
 
 set_languages("c++20")
 
@@ -41,7 +41,7 @@ if is_mode("debug") then
     if is_plat("windows") then
         set_runtimes("MTd")
     end
-else
+elseif is_mode("release") then
     -- 添加NDEBUG编译宏
     add_defines("NDEBUG")
 
@@ -51,6 +51,8 @@ else
     if is_plat("windows") then
         set_runtimes("MT")
     end
+elseif is_mode("releasedbg") then
+    add_defines("DISABLE_LOGGING")
 end
 
 -- 启用协程支持
@@ -98,3 +100,5 @@ includes("hulatang/base")
 includes("hulatang/file")
 includes("hulatang/http")
 includes("hulatang/io")
+
+includes("examples")

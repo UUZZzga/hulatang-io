@@ -11,7 +11,7 @@ using status::EnumEventLoopStatus;
 EventLoopThreadPool::EventLoopThreadPool(EventLoop *baseLoop, std::string_view nameArg)
     : baseLoop_(baseLoop)
     , name_(nameArg)
-    , numThreads_(0)
+    , numThreads_(1)
     , next_(0)
 {}
 
