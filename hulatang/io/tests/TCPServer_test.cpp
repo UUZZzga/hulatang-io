@@ -18,7 +18,7 @@ int main(int _argc, const char **_argv)
     EventLoop loop;
     TCPServer server(&loop, "localhost", 8080);
 
-    server.setThreadNum(8);
+    server.setThreadNum(4);
 
     server.setConnectionCallback([](const auto &conn) {
         if (conn->isConnected())
