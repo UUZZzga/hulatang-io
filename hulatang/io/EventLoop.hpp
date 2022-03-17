@@ -62,6 +62,8 @@ public:
 
     FdEventManager& getFdEventManager() { return *fdEventManager; }
 
+    static EventLoop *getEventLoopOfCurrentThread();
+
 private:
     void init();
     void initNotifyPipeWatcher();

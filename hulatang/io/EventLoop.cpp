@@ -16,7 +16,7 @@ using std::chrono::operator""us;
 constexpr microseconds MaximumBlockingTime = 100ms;
 
 namespace {
-thread_local hulatang::io::EventLoop *thisEventLoop = nullptr;
+thread_local hulatang::io::EventLoop *currentEventLoop = nullptr;
 }
 
 namespace hulatang::io {
@@ -87,6 +87,7 @@ void EventLoop::init()
     fdEventManager = FdEventManager::create(this);
     tid = std::this_thread::get_id();
     initNotifyPipeWatcher();
+    updateTime();
     status.store(EnumEventLoopStatus::Initialized);
 }
 
@@ -156,6 +157,10 @@ void EventLoop::updateTime()
     using std::chrono::duration_cast;
     using std::chrono::system_clock;
     currentTime = duration_cast<microseconds>(system_clock::now().time_since_epoch());
+}
+
+EventLoop *EventLoop::getEventLoopOfCurrentThread() {
+    return currentEventLoop;
 }
 
 bool EventLoop::isIdle() const noexcept
