@@ -4,7 +4,7 @@
 #include "hulatang/base/Buf.hpp"
 #include "hulatang/io/Connector.hpp"
 #include "hulatang/io/InetAddress.hpp"
-#include "hulatang/io/TcpConnection.hpp"
+#include "hulatang/io/TCPConnection.hpp"
 #include <memory>
 #include <mutex>
 namespace hulatang::io {
