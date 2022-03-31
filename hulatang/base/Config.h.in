@@ -8,11 +8,14 @@ ${define HAVE_FWRITE_UNLOCKED}
 #ifndef HAVE__FWRITE_NOLOCK
 ${define HAVE__FWRITE_NOLOCK}
 #endif
+#ifndef HAVE_EPOLL_CREATE
+${define HAVE_EPOLL_CREATE}
+#endif
 #ifndef HAVE_EPOLL_CREATE1
 ${define HAVE_EPOLL_CREATE1}
 #endif
-#ifndef HAVE_EPOLL_CREATE
-${define HAVE_EPOLL_CREATE}
+#ifndef HAVE_ACCEPT4
+${define HAVE_ACCEPT4}
 #endif
 
 #endif // HULATANG_BASE_CONFIG_H

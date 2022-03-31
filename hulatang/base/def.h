@@ -34,8 +34,15 @@
 #    define HLT_FUNC_DEF __PRETTY_FUNCTION__
 #endif
 
+// platform definition macros
+#define HLT_PLATFORM_WINDOWS 0
+#define HLT_PLATFORM_LINUX 0
 #if defined(_WIN32) || defined(_WIN64)
+#    undef HLT_PLATFORM_WINDOWS
 #    define HLT_PLATFORM_WINDOWS 1
+#elif defined(__linux__)
+#    undef HLT_PLATFORM_LINUX
+#    define HLT_PLATFORM_LINUX 1
 #else
 #    error "Unknown host"
 #endif

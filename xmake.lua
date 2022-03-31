@@ -81,6 +81,7 @@ if is_plat("mingw") then
 end
 
 includes("check_cfuncs.lua") -- configvar_check_cfuncs
+includes("check_cxxfuncs.lua") -- configvar_check_cxxfuncs
 includes("check_cxxsnippets.lua") -- configvar_check_cxxsnippets
 
 target("config")
@@ -88,8 +89,10 @@ target("config")
     -- 生成配置文件
     configvar_check_cfuncs("HAVE_FWRITE_UNLOCKED", 'fwrite_unlocked',{includes = {"stdio.h"}})
     configvar_check_cfuncs("HAVE__FWRITE_NOLOCK", '_fwrite_nolock',{includes = {"stdio.h"}})
-    configvar_check_cfuncs("HAVE_EPOLL_CREATE1", 'epoll_create1',{includes = {"sys/epoll.h"}})
     configvar_check_cfuncs("HAVE_EPOLL_CREATE", 'epoll_create',{includes = {"sys/epoll.h"}})
+    configvar_check_cfuncs("HAVE_EPOLL_CREATE1", 'epoll_create1',{includes = {"sys/epoll.h"}})
+    -- accept4 要 __USE_GNU这个宏，经测试gcc没有 g++ 有
+    configvar_check_cxxfuncs("HAVE_ACCEPT4", 'accept4',{includes = {"sys/socket.h"}})
 
     set_configdir("$(buildir)/config")
     add_includedirs("$(buildir)/config", {public = true})

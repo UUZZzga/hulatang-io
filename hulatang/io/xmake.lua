@@ -20,6 +20,15 @@ local sources = {
     "TimerEventWatcher.cpp",
 }
 
+local win32_sources = {
+    "async/IOCPFdEventManager.cpp",
+    "async/Win32Acceptor.cpp"
+}
+
+local linux_sources = {
+    "async/EPollFdEventManager.cpp",
+}
+
 target("hulatang_io")
     set_kind("static")
     add_deps("hulatang_base")
@@ -29,14 +38,15 @@ target("hulatang_io")
     for _, src in ipairs(sources) do
         add_files(src)
     end
+    local platform_sources
     if is_host("windows") then
-        local win32_sources = {
-            "async/IOCPFdEventManager.cpp",
-            "async/Win32Acceptor.cpp"
-        }
-        for _, src in ipairs(win32_sources) do
-            add_files(src)
-        end
+        platform_sources = win32_sources
+    elseif  is_host("linux") then
+        platform_sources = linux_sources
+    end
+    for _, src in ipairs(platform_sources) do
+        add_files(src)
     end
 
+includes("extend")
 includes("tests")

@@ -15,6 +15,8 @@ target("hulatang_base")
     end
     if is_host("windows") then
         add_files("platform/win32/File.cpp")
+    else
+        add_files("platform/posix/File.cpp")
     end
 
 includes("tests")

@@ -1,6 +1,8 @@
 #ifndef HULATANG_BASE_BUF_HPP
 #define HULATANG_BASE_BUF_HPP
 
+#include <cstddef>
+
 namespace hulatang::base {
 struct Buf
 {
