@@ -15,7 +15,7 @@ class Acceptor
 {
 public:
     using NewConnectionCallback = std::function<void(base::FileDescriptor, FdEventWatcherPtr, InetAddress)>;
-    Acceptor(EventLoop *_loop, std::string_view listenAddr, int port);
+    Acceptor(EventLoop *_loop, const InetAddress& address);
     ~Acceptor();
 
     void setNewConnectionCallback(const NewConnectionCallback &cb)

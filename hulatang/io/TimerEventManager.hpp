@@ -32,7 +32,7 @@ public:
 private:
     struct LessTimerEventWatcher
     {
-        _NODISCARD constexpr bool operator()(const TimerEventWatcherPtr &lhs, const TimerEventWatcherPtr &rhs) const
+        [[nodiscard]] bool operator()(const TimerEventWatcherPtr &lhs, const TimerEventWatcherPtr &rhs) const
         {
             return lhs->getTimeout() < rhs->getTimeout();
         }

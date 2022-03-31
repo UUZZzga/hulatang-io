@@ -2,6 +2,8 @@
 #define HULATANG_BASE_NOINIT_HPP
 
 #include <type_traits>
+#include <utility>
+
 namespace hulatang::base {
 // https://stackoverflow.com/questions/96579/stl-vectors-with-uninitialized-storage
 template<typename T>

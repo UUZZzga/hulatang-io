@@ -7,6 +7,7 @@
 #include "hulatang/io/Status.hpp"
 
 #include <mutex>
+#include <condition_variable>
 
 namespace hulatang::io {
 class EventLoopThread

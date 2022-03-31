@@ -46,6 +46,10 @@ void SocketChannel::handleRead(const base::Buf &buf)
     }
     std::error_condition ec;
     fd.read(buf, ec);
+    if (ec && ec.value() == base::FileErrorCode::RESET)
+    {
+        forceCloseInLoop();
+    }
 }
 
 void SocketChannel::handleWrite(const base::Buf &buf)
@@ -62,7 +66,7 @@ bool SocketChannel::send(const base::Buf &buf)
 void SocketChannel::sendInLoop(const base::Buf &buf)
 {
     loop->assertInLoopThread();
-    if (isWriting() || waitSendByteNum == 0)
+    if (isWriting())
     {
         return;
     }
@@ -71,6 +75,10 @@ void SocketChannel::sendInLoop(const base::Buf &buf)
 
     std::error_condition ec;
     fd.write(buf, ec);
+    if (ec && ec.value() == base::FileErrorCode::RESET)
+    {
+        forceCloseInLoop();
+    }
 }
 
 void SocketChannel::forceCloseInLoop()
@@ -119,7 +127,7 @@ void SocketChannel::recvByteNum(char *buf, size_t num)
 
 void SocketChannel::update(int oldflag)
 {
-#if defined (HLT_PLATFORM_WINDOWS)
+#if defined(HLT_PLATFORM_WINDOWS)
     if (oldflag == 0 && (flags & kReadEvent) != 0)
     {
         std::error_condition condition;

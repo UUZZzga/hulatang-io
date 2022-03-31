@@ -35,11 +35,12 @@ void Connector::stop() {}
 
 void Connector::connect()
 {
-    fd.bind("0.0.0.0", 0);
+    //FIXME 改成socket
+    fd.bind(nullptr, 0);
     watcher = std::make_shared<FdEventWatcher>(loop);
     loop->getFdEventManager().add(watcher, fd);
     std::error_condition ec;
-    fd.connect(address.sockaddr(), address.sockaddrLength(), ec);
+    fd.connect(address.getSockaddr(), address.sockaddrLength(), ec);
     if (!ec)
     {
         connected();

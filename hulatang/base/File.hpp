@@ -13,15 +13,16 @@ struct sockaddr;
 namespace hulatang::base {
 enum OFlag
 {
-    O_READ = 1,
-    O_WRITE = 2,
-    O_EXEC = 4,
+    READ = 1,
+    WRITE = 2,
+    EXEC = 4,
 };
 
 class FileDescriptor
 {
 public:
     class ErrorCategory;
+    struct Impl;
 
     FileDescriptor();
     ~FileDescriptor() noexcept;
@@ -31,6 +32,7 @@ public:
     [[nodiscard]] uintptr_t getFd() const noexcept;
 
     // open
+    //TODO path不是c风格字符串
     void open(std::string_view path, OFlag oflag, std::error_condition &condition);
 
     // create
@@ -45,7 +47,7 @@ public:
 
     // ======================= socket ==================================
     // bind
-    void bind(std::string_view localHost, int localPort);
+    void bind(sockaddr *addr, size_t len);
 
     // listen
     void listen(std::error_condition &condition);
@@ -66,7 +68,6 @@ public:
     size_t peeraddrLength();
 
 private:
-    struct Impl;
     std::unique_ptr<Impl> impl;
 };
 
@@ -75,6 +76,7 @@ enum FileErrorCode : int
     NONE,
     CONNECTING,
     _ERROR,
+    RESET,
     NOT_FOUND = _ERROR,
     DEADLINE_EXCEEDED,
     OUT_OF_RANGE,
@@ -88,11 +90,15 @@ enum FileErrorCode : int
 class FileDescriptor::ErrorCategory : public std::error_category
 {
 public:
+#if HLT_PLATFORM_WINDOWS
     // 66696C65 ASCII is file
     constexpr static uintptr_t FILE_ERROR_ADDR = 0x66696C65;
     constexpr ErrorCategory() noexcept
         : error_category(FILE_ERROR_ADDR)
     {}
+#else
+    constexpr ErrorCategory() noexcept = default;
+#endif
 
     [[nodiscard]] const char *name() const noexcept override
     {

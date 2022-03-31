@@ -6,11 +6,11 @@
 #include "hulatang/io/EventLoopThreadPool.hpp"
 
 namespace hulatang::io {
-Acceptor::Acceptor(EventLoop *_loop, std::string_view listenAddr, int port)
+Acceptor::Acceptor(EventLoop *_loop, const InetAddress &address)
     : loop(_loop)
     , threadPool(nullptr)
 {
-    acceptFd.bind(listenAddr, port);
+    acceptFd.bind(address.getSockaddr(), address.sockaddrLength());
 }
 
 Acceptor::~Acceptor()

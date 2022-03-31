@@ -17,16 +17,20 @@ void TCPConnection::send(const base::Buf &buf)
     {
         expected = 0;
     }
-    std::error_condition condition;
-    channel->getFd().write(buf, condition);
-    if (condition)
-    {
-        HLT_CORE_WARN("condition code{}, message{}", condition.value(), condition.message());
-    }
+    channel->send(buf);
+    // std::error_condition condition;
+    // channel->getFd().write(buf, condition);
+    // if (condition)
+    // {
+    //     HLT_CORE_WARN("condition code{}, message{}", condition.value(), condition.message());
+    // }
     sending.store(0);
 }
 
-void TCPConnection::shutdown() {}
+void TCPConnection::shutdown()
+{
+    loop->queueInLoop([_this = shared_from_this()] { _this->closeCallback(_this); });
+}
 
 void TCPConnection::connectEstablished(base::FileDescriptor &&fd)
 {
@@ -58,7 +62,6 @@ void TCPConnection::connectDestroyed()
 
         auto ptr = shared_from_this();
         connectionCallback(ptr);
-        closeCallback(ptr);
     }
     // channel->remove();
 }

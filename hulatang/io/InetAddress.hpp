@@ -39,7 +39,7 @@ public:
         std::swap(sockaddrLength_, other.sockaddrLength_);
     }
 
-    [[nodiscard]] sockaddr *sockaddr() const { return sockaddr_; }
+    [[nodiscard]] sockaddr *getSockaddr() const { return sockaddr_; }
 
     [[nodiscard]] size_t sockaddrLength() const { return sockaddrLength_; }
 

@@ -4,7 +4,7 @@
 namespace hulatang::base {
 struct Buf
 {
-    Buf(char *_buf, size_t _len)
+    Buf(char *_buf = nullptr, size_t _len = 0)
         : buf(_buf)
         , len(_len)
     {}

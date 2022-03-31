@@ -18,7 +18,7 @@ public:
     using ConnectionCallback = std::function<void(const TCPConnectionPtr &)>;
     using MessageCallback = std::function<void(const TCPConnectionPtr &, const base::Buf &)>;
 
-    TCPServer(EventLoop *_loop, std::string_view listenAddr, int port);
+    TCPServer(EventLoop *_loop, std::string_view listenAddr, uint16_t port);
 
     void setThreadNum(int numThreads);
 
@@ -43,6 +43,7 @@ private:
     ConnectionCallback connectionCallback;
     MessageCallback messageCallback;
     EventLoop *loop;
+    InetAddress listenAddr;
     std::unique_ptr<EventLoopThreadPool> pool;
     std::unordered_map<std::string, TCPConnectionPtr> map;
     Acceptor acceptor;

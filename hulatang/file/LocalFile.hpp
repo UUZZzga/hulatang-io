@@ -5,6 +5,7 @@
 #include "hulatang/base/Buffer.hpp"
 #include "hulatang/io/FdEventWatcher.hpp"
 
+#include <atomic>
 #include <functional>
 #include <string_view>
 #include <system_error>

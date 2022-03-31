@@ -4,6 +4,7 @@
 #include "hulatang/base/NoInit.hpp"
 
 #include <cassert>
+#include <bit>
 #include <algorithm>
 #include <string_view>
 #include <vector>

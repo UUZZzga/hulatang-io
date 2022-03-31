@@ -13,7 +13,6 @@
 #include <functional>
 #include <memory>
 #include <ratio>
-#include <stdint.h>
 #include <thread>
 #include <cassert>
 #include <chrono>

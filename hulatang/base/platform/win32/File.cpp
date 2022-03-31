@@ -1,5 +1,6 @@
 #include "hulatang/base/File.hpp"
 
+#include "hulatang/base/extend/Cast.hpp"
 #include "hulatang/base/platform/win32/Type.hpp"
 
 #include "hulatang/base/Log.hpp"
@@ -13,16 +14,17 @@
 using hulatang::make_win32_error_code;
 
 using hulatang::base::Buf;
-using hulatang::base::O_EXEC;
-using hulatang::base::O_READ;
-using hulatang::base::O_WRITE;
+using hulatang::base::EXEC;
 using hulatang::base::OFlag;
+using hulatang::base::READ;
+using hulatang::base::WRITE;
 
 constexpr uintptr_t socketFlag = 1ULL << 63;
 
 namespace impl {
 constexpr int addrLen = sizeof(sockaddr_in) + 16; // TODO 没有支持ipv6
 
+using hulatang::implicit_cast;
 using hulatang::base::fd_t;
 using hulatang::base::FdNull;
 using hulatang::base::IO_DATA;
@@ -108,15 +110,15 @@ sockaddr_u getSockaddr(std::string_view host, int port, std::error_code &ec)
 inline DWORD buildAccess(OFlag oflag)
 {
     DWORD access = 0;
-    if ((oflag & O_READ) != 0)
+    if ((oflag & READ) != 0)
     {
         access |= GENERIC_READ;
     }
-    if ((oflag & O_WRITE) != 0)
+    if ((oflag & WRITE) != 0)
     {
         access |= GENERIC_WRITE;
     }
-    if ((oflag & O_EXEC) != 0)
+    if ((oflag & EXEC) != 0)
     {
         access |= GENERIC_EXECUTE;
     }
@@ -177,17 +179,10 @@ int64_t lseek(fd_t fd, int64_t offset, int whence, std::error_code &ec) noexcept
     return li.QuadPart;
 }
 
-fd_t bind(std::string_view localHost, int localPort, std::error_code &ec) noexcept
+fd_t bind(sockaddr *addr, size_t len, std::error_code &ec) noexcept
 {
     fd_t fd = FdNull;
-    sockaddr_u localAddr = getSockaddr(localHost, localPort, ec);
-    if (ec)
-    {
-        return FdNull;
-    }
-    int addrSize = localAddr.sa.sa_family == AF_INET ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
-
-    fd = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, 0, WSA_FLAG_OVERLAPPED);
+    fd = WSASocketW(addr->sa_family, SOCK_STREAM, IPPROTO_TCP, nullptr, 0, WSA_FLAG_OVERLAPPED);
     if (INVALID_SOCKET == fd)
     {
         return FdNull;
@@ -202,13 +197,15 @@ fd_t bind(std::string_view localHost, int localPort, std::error_code &ec) noexce
         ec = make_win32_error_code(err);
         return FdNull;
     };
-
-    if (SOCKET_ERROR == bind(fd, &localAddr.sa, addrSize))
+    if (addr != nullptr)
     {
-        int err = WSAGetLastError();
-        if (ERROR_IO_PENDING != err)
+        if (SOCKET_ERROR == bind(fd, addr, implicit_cast<DWORD>(len)))
         {
-            return error(err);
+            int err = WSAGetLastError();
+            if (ERROR_IO_PENDING != err)
+            {
+                return error(err);
+            }
         }
     }
     assert((fd & socketFlag) == 0);
@@ -316,7 +313,7 @@ void read(fd_t fd, const Buf &buf, IO_DATA &data, std::error_code &ec) noexcept
             bufLen = fileSize.QuadPart - filePointer.QuadPart;
         }
 
-        bRet = ::ReadFile(reinterpret_cast<HANDLE>(fd), buf.buf, bufLen, nullptr, &data.overlapped);
+        bRet = ::ReadFile(reinterpret_cast<HANDLE>(fd), buf.buf, implicit_cast<DWORD>(bufLen), nullptr, &data.overlapped);
         if (bRet == 0)
         {
             ec = make_win32_error_code(GetLastError());
@@ -435,11 +432,11 @@ void FileDescriptor::updatePosition(uint64_t position)
 #endif
 }
 
-void FileDescriptor::bind(std::string_view localHost, int localPort)
+void FileDescriptor::bind(sockaddr *addr, size_t len)
 {
     assert(!impl);
     std::error_code ec;
-    impl::fd_t fd = impl::bind(localHost, localPort, ec);
+    impl::fd_t fd = impl::bind(addr, len, ec);
     if (ec)
     {
         HLT_CORE_WARN("error code: {}, message: {}", ec.value(), ec.message());
@@ -504,16 +501,25 @@ void FileDescriptor::connect(sockaddr *addr, size_t len, std::error_condition &c
 void FileDescriptor::read(const Buf &buf, std::error_condition &condition) noexcept
 {
     assert(impl);
-
     std::error_code ec;
     impl::read(impl->fd, buf, impl->recvData, ec);
     if (!ec)
     {
         return;
     }
-    if (ec.category() == win32_category() && ERROR_IO_PENDING == ec.value())
+    if (ec.category() == win32_category())
     {
-        return;
+        switch (ec.value())
+        {
+        case ERROR_IO_PENDING: {
+            assert(impl->recvData.operationType != Type::NONE);
+            return;
+        }
+        case WSAECONNRESET: {
+            condition = make_file_error_condition(FileErrorCode::RESET);
+            return;
+        }
+        }
     }
     HLT_CORE_WARN("error code: {}, message: {}", ec.value(), ec.message());
     impl->recvData.operationType = Type::NONE;
@@ -528,9 +534,19 @@ void FileDescriptor::write(const Buf &buf, std::error_condition &condition) noex
     {
         return;
     }
-    if (ec.category() == win32_category() && ERROR_IO_PENDING == ec.value())
+    if (ec.category() == win32_category())
     {
-        return;
+        switch (ec.value())
+        {
+        case ERROR_IO_PENDING: {
+            assert(impl->sendData.operationType != Type::NONE);
+            return;
+        }
+        case WSAECONNRESET: {
+            condition = make_file_error_condition(FileErrorCode::RESET);
+            return;
+        }
+        }
     }
     HLT_CORE_WARN("error code: {}, message: {}", ec.value(), ec.message());
     impl->sendData.operationType = Type::NONE;

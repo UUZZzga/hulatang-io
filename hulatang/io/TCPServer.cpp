@@ -9,10 +9,11 @@
 
 namespace hulatang::io {
 
-TCPServer::TCPServer(EventLoop *_loop, std::string_view listenAddr, int port)
+TCPServer::TCPServer(EventLoop *_loop, std::string_view listenAddr, uint16_t port)
     : loop(_loop)
     , pool(std::make_unique<EventLoopThreadPool>(loop, "TCPServer"))
-    , acceptor(_loop, listenAddr, port)
+    , listenAddr(InetAddress::fromHostnameAndPort(std::string(listenAddr), port))
+    , acceptor(_loop, this->listenAddr)
 {
     acceptor.setNewConnectionCallback([this](auto &&PH1, auto &&PH2, auto &&PH3) {
         newConnection(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2), std::forward<decltype(PH3)>(PH3));

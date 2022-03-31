@@ -1,5 +1,6 @@
 #include "hulatang/io/async/IOCPFdEventManager.hpp"
 
+#include "hulatang/base/extend/Cast.hpp"
 #include "hulatang/base/File.hpp"
 #include "hulatang/base/error/ErrorCode.hpp"
 #include "hulatang/base/platform/win32/Type.hpp"
@@ -45,7 +46,7 @@ void IOCPFdEventManager::process(microseconds blockTime)
     for (; currentTime < timeout; loop->updateTime(), currentTime = loop->getCurrentTime())
     {
         auto iocpBlockMs = std::chrono::duration_cast<std::chrono::milliseconds>(timeout - currentTime).count();
-        BOOL bRet = GetQueuedCompletionStatus(iocpHandle, &bytes, &ptr, &pOverlapped, iocpBlockMs);
+        BOOL bRet = GetQueuedCompletionStatus(iocpHandle, &bytes, &ptr, &pOverlapped, implicit_cast<DWORD>(iocpBlockMs));
         if (ptr == WAKEUP_NUMBER)
         {
             return;
@@ -81,7 +82,7 @@ void IOCPFdEventManager::process(microseconds blockTime)
         }
         auto *data = CONTAINING_RECORD(pOverlapped, base::IO_DATA, overlapped);
         auto type = data->operationType;
-        data->operationType = base::Type::NONE;
+        // data->operationType = base::Type::NONE;
         switch (type)
         {
         case OPEN: {
@@ -94,17 +95,20 @@ void IOCPFdEventManager::process(microseconds blockTime)
         }
         break;
         case READ: {
+            // HLT_CORE_WARN("read data: {}, bytes: {}", static_cast<void *>(data), bytes);
             watcher->readHandle(data->buf, bytes);
         }
         break;
         case WRITE: {
+            // assert(bytes != 0);
+            // HLT_CORE_WARN("write data: {}, bytes: {}", static_cast<void *>(data), bytes);
             watcher->writeHandle(bytes);
         }
         break;
         default: {
-            HLT_CORE_ERROR("未知错误");
+            HLT_CORE_ERROR("未知错误! data: {}, bytes: {}", static_cast<void *>(data), bytes);
         }
-        };
+        }
     }
 }
 

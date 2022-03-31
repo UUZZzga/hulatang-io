@@ -4,12 +4,13 @@
 #include "hulatang/base/def.h"
 
 #include "hulatang/base/extend/Defer.hpp"
-#include <corecrt_malloc.h>
-#include <vcruntime_string.h>
-#include <winsock2.h>
 
-#if defined(HLT_PLATFORM_WINDOWS)
+#if HLT_PLATFORM_WINDOWS
+#    include <winsock2.h>
 #    include <ws2tcpip.h>
+#else
+#    include <arpa/inet.h>
+#    include <netdb.h>
 #endif
 
 namespace {
@@ -100,8 +101,8 @@ InetAddress InetAddress::fromHostnameAndService(const std::string &host, const s
 
 InetAddress InetAddress::fromHostnameAndPort(const std::string &host, uint16_t port, bool mandatoryIPv4, bool tcp)
 {
-    // TODO 没有实现
-    return {};
+    // TODO 没有实现, 临时先用 fromHostnameAndService 代替
+    return fromHostnameAndService(host, std::to_string(port), mandatoryIPv4);
 }
 
 std::string InetAddress::toString() const

@@ -29,7 +29,7 @@ void TCPClient::newConnection(base::FileDescriptor &&fd, FdEventWatcherPtr watch
 {
     loop->assertInLoopThread();
     TCPConnectionPtr conn(
-        std::make_shared<TCPConnection>(loop, watcher, InetAddress::copyFromNative(address.sockaddr(), address.sockaddrLength())
+        std::make_shared<TCPConnection>(loop, watcher, InetAddress::copyFromNative(address.getSockaddr(), address.sockaddrLength())
             // , "", fd, localAddr, peerAddr
             ));
     conn->setConnectionCallback(connectionCallback);
