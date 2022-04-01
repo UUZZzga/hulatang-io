@@ -1,5 +1,6 @@
 #include "hulatang/base/File.hpp"
 
+#include "hulatang/base/Socket.hpp"
 #include "hulatang/base/platform/posix/Type.hpp"
 
 #include "hulatang/base/Log.hpp"
@@ -43,13 +44,19 @@ inline int buildAccess(OFlag oflag)
 namespace hulatang::base {
 FileDescriptor::FileDescriptor() = default;
 
+FileDescriptor::FileDescriptor(socket::fd_t fd)
+{
+    impl.reset(new Impl{nullptr});
+    impl->fd = fd;
+}
+
 FileDescriptor::~FileDescriptor() noexcept = default;
 
 FileDescriptor::FileDescriptor(FileDescriptor &&other) noexcept
     : impl(move(other.impl))
 {}
 
-uintptr_t FileDescriptor::getFd() const noexcept
+socket::fd_t FileDescriptor::getFd() const noexcept
 {
     assert(impl);
     return impl->fd;
@@ -96,10 +103,14 @@ void FileDescriptor::bind(sockaddr *addr, size_t len)
 {
     assert(!impl);
 
-    int fd = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
+    int fd = ::socket(addr->sa_family, SOCK_STREAM, IPPROTO_TCP);
     if (addr != nullptr)
     {
-        ::bind(fd, addr, len);
+        if (::bind(fd, addr, len) < 0)
+        {
+            int err = errno;
+            HLT_ERROR("bind err:{}", err);
+        }
     }
 
     impl.reset(new Impl{nullptr});
@@ -130,66 +141,14 @@ void FileDescriptor::listen(std::error_condition &condition)
             break;
         }
     }
+    impl->accept = 1;
 }
 
 void FileDescriptor::accept(FileDescriptor &fd, std::error_condition &condition)
 {
     assert(impl);
     assert(!fd.impl);
-
-    sockaddr_in6 addr{};
-    socklen_t addrLength = 0;
-#if HAVE_ACCEPT4
-    int connfd = ::accept4(impl->fd, reinterpret_cast<sockaddr *>(&addr), &addrLength, SOCK_NONBLOCK | SOCK_CLOEXEC);
-#else
-    int connfd = ::accept(impl->fd, reinterpret_cast<sockaddr *>(&addr), &addrLength);
-#endif
-    if (connfd < 0)
-    {
-        int err = errno;
-        switch (err)
-        {
-        case EAGAIN:
-#if EWOULDBLOCK != EAGAIN
-        case EWOULDBLOCK:
-#endif
-        {
-            // 没有请求
-        }
-        break;
-        case ECONNABORTED: // 连接已中止
-        {
-        }
-        break;
-        case EINTR: // 系统调用被在有效连接到达之前捕获的信号中断
-        {
-        }
-        break;
-        case EMFILE: // 已达到每个进程对打开的文件描述符数量的限制
-        case ENFILE: // 已达到系统范围内打开文件总数的限制
-        {
-        }
-        break;
-        case ENOBUFS:
-        case ENOMEM: {
-            // 没有足够的可用内存
-        }
-        break;
-        case EPROTO:     // 协议错误
-        case ENOTSOCK:   // 不是套接字
-        case EOPNOTSUPP: // 引用的套接字不是SOCK_STREAM类型
-        case EINVAL:     // 套接字未侦听连接，或addrlen无效
-        case EFAULT:     // addr参数不在用户地址空间的可写部分
-        case EBADF:      // 参数sockfd不是有效的文件描述符
-        {
-            throw std::runtime_error("Invalid");
-        }
-        break;
-        default:
-            HLT_FATAL("unknown error of ::accept {}", err);
-            break;
-        }
-    }
+    condition = make_file_error_condition(FileErrorCode::CONNECTING);
 }
 
 void FileDescriptor::connect(sockaddr *addr, size_t len, std::error_condition &condition) noexcept
@@ -202,41 +161,16 @@ void FileDescriptor::read(const Buf &buf, std::error_condition &condition) noexc
 {
     assert(impl);
     assert((impl->event & READ) == 0);
-    impl->event |= READ;
-
-    ssize_t size = ::read(impl->fd, buf.buf, buf.len);
-    if (size < 0)
-    {
-        int err = errno;
-        switch (err)
-        {
-        case EAGAIN:
-#if EWOULDBLOCK != EAGAIN
-        case EWOULDBLOCK:
-#endif
-        {
-            // 没有请求
-        }
-        break;
-
-        case EINVAL:
-        case EBADF:  // fd不是有效的文件描述符或未打开读取
-        case EFAULT: // buf在您可访问的地址空间之外
-        case EINTR:  // 在读取任何数据之前，被信号中断
-        {
-            // TODO
-            abort();
-        }
-        break;
-        }
-    }
+    impl->read = 1;
+    impl->readBuf = buf;
 }
 
 void FileDescriptor::write(const Buf &buf, std::error_condition &condition) noexcept
 {
     assert(impl);
     assert((impl->event & FileDescriptor::Impl::WRITE) == 0);
-    impl->event |= WRITE;
+    impl->write = 1;
+    impl->writeBuf = buf;
 }
 
 void FileDescriptor::close() noexcept
@@ -250,12 +184,5 @@ void FileDescriptor::close() noexcept
     }
     impl.reset();
 }
-
-const sockaddr *FileDescriptor::peeraddr()
-{
-    assert(impl);
-}
-
-size_t FileDescriptor::peeraddrLength() {}
 
 } // namespace hulatang::base

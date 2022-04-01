@@ -89,10 +89,10 @@ protected:
     EventLoop *loop;
     base::FileDescriptor fd;
     DefaultCallback closeCallback;
-#if defined(HLT_PLATFORM_WINDOWS)
+// #if defined(HLT_PLATFORM_WINDOWS)
     static constexpr size_t bufferSize = 4096;
     std::unique_ptr<char[]> buffer;
-#endif
+// #endif
     int flags;
 };
 } // namespace hulatang::io

@@ -17,6 +17,7 @@ target("hulatang_base")
         add_files("platform/win32/File.cpp")
     else
         add_files("platform/posix/File.cpp")
+        add_files("Socket.cpp")
     end
 
 includes("tests")

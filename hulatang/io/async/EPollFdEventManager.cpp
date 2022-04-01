@@ -31,6 +31,8 @@ EPollFdEventManager::EPollFdEventManager(EventLoop *loop)
 #else
     , epollFd(epoll_create(1024))
 #endif
+    , events(128)
+    , watchers(128)
 {
 #ifndef HAVE_EPOLL_CREATE1
     int val = fcntl(epollFd, F_GETFD);
@@ -58,7 +60,7 @@ void EPollFdEventManager::process(microseconds blockTime)
     {
         HLT_CORE_TRACE("{} events happened", numEvents);
         processEvent(numEvents);
-        if (numEvents == events.size())
+        if (implicit_cast<size_t>(numEvents) == events.size())
         {
             events.resize(events.size() * 2);
         }
@@ -78,22 +80,55 @@ void EPollFdEventManager::process(microseconds blockTime)
     }
 }
 
-void EPollFdEventManager::add(const FdEventWatcherPtr &watcher, const base::FileDescriptor &descriptor)
+void EPollFdEventManager::add(const FdEventWatcherPtr &watcher, const base::FileDescriptor &fd)
 {
-    FdEventManager::add(watcher, descriptor);
-    // CreateIoCompletionPort(reinterpret_cast<HANDLE>(descriptor.getFd()), iocpHandle, reinterpret_cast<ULONG_PTR>(watcher.get()), 0);
+    FdEventManager::add(watcher, fd);
+    auto fdNum = fd.getFd();
+
+    auto *impl = const_cast<base::FileDescriptor::Impl *>(fd.getImpl());
+    uint32_t events = 0;
+    if (impl->accept)
+    {
+        events |= EPOLLIN;
+    }
+    else
+    {
+        if (impl->read)
+        {
+            events |= EPOLLIN | EPOLLPRI;
+        }
+        if (impl->write)
+        {
+            events |= EPOLLOUT;
+        }
+    }
+    epoll_event event{.events = events, .data = {.ptr = impl}};
+    auto idx = implicit_cast<size_t>(fdNum);
+    int op = watchers[idx] == nullptr ? EPOLL_CTL_ADD : EPOLL_CTL_MOD;
+    if (::epoll_ctl(epollFd, op, fdNum, &event) < 0)
+    {
+        int err = errno;
+        abort();
+    }
+    if (watchers.size() < idx)
+    {
+        watchers.resize(watchers.size() * 2);
+    }
+    assert(idx < watchers.size());
+    watchers[idx] = watcher.get();
 }
 
-void EPollFdEventManager::cancel(const FdEventWatcherPtr &watcher)
+void EPollFdEventManager::cancel(const FdEventWatcherPtr &watcher, const base::FileDescriptor &fd)
 {
-    FdEventManager::cancel(watcher);
+    FdEventManager::cancel(watcher, fd);
     // disableAll();
+    auto idx = implicit_cast<size_t>(fd.getFd());
+    assert(idx < watchers.size());
+    assert(watchers[idx] != nullptr);
+    watchers[idx] = nullptr;
 }
 
-void EPollFdEventManager::wakeup()
-{
-
-}
+void EPollFdEventManager::wakeup() {}
 
 void EPollFdEventManager::processEvent(int numEvents)
 {
@@ -106,15 +141,42 @@ void EPollFdEventManager::processEvent(int numEvents)
             continue;
         }
         auto *impl = static_cast<base::FileDescriptor::Impl *>(event.data.ptr);
-        auto *watcher = static_cast<FdEventWatcher *>(impl->watcher);
-        if ((event.events & (EPOLLIN | EPOLLET | EPOLLHUP | EPOLLPRI)) != 0)
+        auto *watcher = watchers[impl->fd];
+        assert(watcher != nullptr);
+        if ((event.events & (EPOLLIN | EPOLLET | EPOLLHUP)) != 0)
         {
             // read event
+            ssize_t size;
             if (impl->accept != 1U)
             {
-                read(impl->fd, impl->readBuf.buf, impl->readBuf.len);
+                size = read(impl->fd, impl->readBuf.buf, impl->readBuf.len);
+                if (size < 0)
+                {
+                    int err = errno;
+                    switch (err)
+                    {
+                    case EAGAIN:
+#if EWOULDBLOCK != EAGAIN
+                    case EWOULDBLOCK:
+#endif
+                    {
+                        // 没有请求
+                    }
+                    break;
+
+                    case EINVAL:
+                    case EBADF:  // fd不是有效的文件描述符或未打开读取
+                    case EFAULT: // buf在您可访问的地址空间之外
+                    case EINTR:  // 在读取任何数据之前，被信号中断
+                    {
+                        // TODO
+                        abort();
+                    }
+                    break;
+                    }
+                }
             }
-            watcher->readHandle(impl->readBuf.buf, impl->readBuf.len);
+            watcher->readHandle(impl->readBuf.buf, implicit_cast<size_t>(size));
         }
         if ((event.events & (EPOLLOUT | EPOLLET | EPOLLHUP)) != 0U)
         {
@@ -122,7 +184,7 @@ void EPollFdEventManager::processEvent(int numEvents)
             ssize_t size = write(impl->fd, impl->writeBuf.buf, impl->writeBuf.len);
             if (size >= 0)
             {
-                watcher->writeHandle(size);
+                watcher->writeHandle(impl->writeBuf.buf, size);
             }
         }
         psize++;

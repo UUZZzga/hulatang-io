@@ -34,6 +34,10 @@ std::string sock_ntop(const sockaddr *sa, size_t len)
     std::array<char, 128> buf{};
     switch (sa->sa_family)
     {
+    case AF_UNSPEC: {
+        return "unspecified";
+    }
+    break;
     case AF_INET: {
         const auto *sin = reinterpret_cast<const sockaddr_in *>(sa);
         if (inet_ntop(AF_INET, &sin->sin_addr, buf.data(), buf.size()) == nullptr)

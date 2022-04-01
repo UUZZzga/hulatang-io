@@ -68,7 +68,7 @@ void LocalFile::initFdChannel(const std::shared_ptr<io::FdEventWatcher> &watcher
     loop_->getFdEventManager().add(watcher, fd_);
     using namespace std::placeholders;
     watcher->setReadHandler([this](auto &&PH1, auto &&PH2) { onRead(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2)); });
-    watcher->setWriteHandler([this](auto &&PH1) { onWrite(std::forward<decltype(PH1)>(PH1)); });
+    watcher->setWriteHandler([this](auto &&PH1, auto &&PH2) { onWrite(std::forward<decltype(PH2)>(PH2)); });
     watcher->setCloseHandler([this] { loop_->runInLoop([this] { inLoopClose(); }); });
 }
 
@@ -110,7 +110,7 @@ void LocalFile::inLoopCreate(std::string_view path, base::OFlag mode)
 void LocalFile::inLoopClose()
 {
     assert(!watcher_.expired());
-    loop_->getFdEventManager().cancel(watcher_.lock());
+    loop_->getFdEventManager().cancel(watcher_.lock(), fd_);
     fd_.close();
     watcher_.reset();
 }

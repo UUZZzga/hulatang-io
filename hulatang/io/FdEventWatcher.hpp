@@ -13,7 +13,7 @@ using FdEventWatcherPtr = std::shared_ptr<FdEventWatcher>;
 class FdEventWatcher : public ClosableEventWatcher
 {
 public:
-    using WriteEventHandler = std::function<void(size_t)>;
+    using WriteEventHandler = std::function<void(char *, size_t)>;
     using ReadEventHandler = std::function<void(char *, size_t)>;
     using ErrorEventHandler = std::function<void(std::error_condition &)>;
 
@@ -49,9 +49,9 @@ public:
         readHandler(buf, num);
     }
 
-    void writeHandle(size_t num)
+    void writeHandle(char * buf, size_t num)
     {
-        writeHandler(num);
+        writeHandler(buf, num);
     }
 
     void openHandle()

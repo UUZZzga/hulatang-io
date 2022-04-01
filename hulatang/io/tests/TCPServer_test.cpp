@@ -3,7 +3,9 @@
 #include "hulatang/io/TCPConnection.hpp"
 #include "hulatang/io/TCPServer.hpp"
 #include <chrono>
-#include <winsock2.h>
+#if HLT_PLATFORM_WINDOWS
+#    include <winsock2.h>
+#endif
 
 using hulatang::base::Log;
 using hulatang::io::EventLoop;
@@ -11,8 +13,10 @@ using hulatang::io::TCPServer;
 
 int main(int _argc, const char **_argv)
 {
+#if HLT_PLATFORM_WINDOWS
     WSADATA wsaData;
     WSAStartup(MAKEWORD(2, 2), &wsaData);
+#endif
 
     Log::init();
     EventLoop loop;
@@ -37,7 +41,8 @@ int main(int _argc, const char **_argv)
 
     server.start();
     loop.run();
-
+#if HLT_PLATFORM_WINDOWS
     WSACleanup();
+#endif
     return 0;
 }

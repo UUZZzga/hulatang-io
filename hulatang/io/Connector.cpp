@@ -58,7 +58,7 @@ void Connector::connect()
     else
     {
         fd.close();
-        loop->getFdEventManager().cancel(watcher);
+        loop->getFdEventManager().cancel(watcher, fd);
     }
 }
 
@@ -94,7 +94,7 @@ void Connector::handleError(std::error_condition &ec)
 {
     HLT_CORE_ERROR("Connector::handleError state={}", static_cast<int>(state));
     HLT_CORE_TRACE("SO_ERROR = {}, message={}", ec.value(), ec.message());
-    loop->getFdEventManager().cancel(watcher);
+    loop->getFdEventManager().cancel(watcher, fd);
     fd.close();
     retry();
 }

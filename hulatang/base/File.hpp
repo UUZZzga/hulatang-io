@@ -1,6 +1,7 @@
 #ifndef HULATANG_BASE_FILE_HPP
 #define HULATANG_BASE_FILE_HPP
 
+#include "hulatang/base/Socket.hpp"
 #include "hulatang/base/def.h"
 #include "hulatang/base/Buf.hpp"
 #include <cstdint>
@@ -25,14 +26,15 @@ public:
     struct Impl;
 
     FileDescriptor();
+    explicit FileDescriptor(socket::fd_t fd);
     ~FileDescriptor() noexcept;
 
     FileDescriptor(FileDescriptor &&other) noexcept;
 
-    [[nodiscard]] uintptr_t getFd() const noexcept;
+    [[nodiscard]] socket::fd_t getFd() const noexcept;
 
     // open
-    //TODO path不是c风格字符串
+    // TODO path不是c风格字符串
     void open(std::string_view path, OFlag oflag, std::error_condition &condition);
 
     // create
@@ -64,8 +66,25 @@ public:
 
     void close() noexcept;
 
+#if defined(HLT_PLATFORM_WINDOWS)
     const sockaddr *peeraddr();
     size_t peeraddrLength();
+#endif
+
+    void swap(FileDescriptor &other)
+    {
+        std::swap(impl, other.impl);
+    }
+
+    [[nodiscard]] const Impl *getImpl() const
+    {
+        return impl.get();
+    }
+
+    [[nodiscard]] Impl *getImpl()
+    {
+        return impl.get();
+    }
 
 private:
     std::unique_ptr<Impl> impl;

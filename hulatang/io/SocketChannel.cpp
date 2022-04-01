@@ -68,11 +68,11 @@ void SocketChannel::sendInLoop(const base::Buf &buf)
     loop->assertInLoopThread();
     if (isWriting())
     {
-        return;
+        abort();
     }
     // disableWriting in down
     enableWriting();
-
+    waitSendByteNum = buf.len;
     std::error_condition ec;
     fd.write(buf, ec);
     if (ec && ec.value() == base::FileErrorCode::RESET)
@@ -87,7 +87,7 @@ void SocketChannel::forceCloseInLoop()
     auto ptr = watcher.lock();
     assert(ptr);
     connectionCallback(shared_from_this());
-    loop->getFdEventManager().cancel(ptr);
+    loop->getFdEventManager().cancel(ptr, fd);
     fd.close();
 }
 
@@ -97,22 +97,20 @@ void SocketChannel::runSend(const base::Buf &buf)
     DLOG_TRACE;
 }
 
-void SocketChannel::sendByteNum(size_t num)
+void SocketChannel::sendByteNum(char *buf, size_t num)
 {
     loop->assertInLoopThread();
-
-    // finishedSendByteNum += num;
-    // bool disableWriting = false;
-    // {
-    //     std::lock_guard lock(writeLock);
-    //     if (finishedSendByteNum == waitSendCacheByteNum)
-    //     {
-    //         finishedSendByteNum = 0;
-    //         waitSendCacheByteNum = 0;
-    //         disableWriting = true;
-    //     }
-    // }
-    // if (disableWriting) {}
+    waitSendByteNum -= num;
+    if (waitSendByteNum == 0)
+    {
+        disableWriting();
+    }
+    else
+    {
+        assert(HLT_PLATFORM_WINDOWS == 0);
+        std::error_condition condition;
+        fd.write({buf + num, waitSendByteNum}, condition);
+    }
 }
 void SocketChannel::recvByteNum(char *buf, size_t num)
 {
@@ -127,15 +125,25 @@ void SocketChannel::recvByteNum(char *buf, size_t num)
 
 void SocketChannel::update(int oldflag)
 {
-#if defined(HLT_PLATFORM_WINDOWS)
-    if (oldflag == 0 && (flags & kReadEvent) != 0)
+    if ((oldflag & kReadEvent) == 0 && (flags & kReadEvent) != 0)
+    {
+        postRead();
+        loop->getFdEventManager().add(watcher.lock(), fd);
+    }
+    if ((oldflag & kWriteEvent) != 0 || (flags & kWriteEvent) != 0)
     {
         std::error_condition condition;
-        fd.read({buffer.get(), bufferSize}, condition);
+        fd.write({}, condition);
+        loop->getFdEventManager().add(watcher.lock(), fd);
     }
-#endif
 }
 
 void SocketChannel::handleRead() {}
+
+void SocketChannel::postRead()
+{
+    std::error_condition condition;
+    fd.read({buffer.get(), bufferSize}, condition);
+}
 
 } // namespace hulatang::io

@@ -48,13 +48,15 @@ public:
 
     void setMessageCallback(const MessageCallback &messageCallback);
 
-    void sendByteNum(size_t num);
+    void sendByteNum(char *buf, size_t num);
 
     void recvByteNum(char *buf, size_t num);
 
     void update(int oldflag) override;
 
     void handleRead() override;
+
+    void postRead();
 
 private:
     void sendInLoop(const base::Buf &buf);

@@ -5,9 +5,9 @@ namespace hulatang::io {
 Channel::Channel(EventLoop *loop, base::FileDescriptor &&fd)
     : loop(loop)
     , fd(std::move(fd))
-#if HLT_PLATFORM_WINDOWS
+// #if HLT_PLATFORM_WINDOWS
     , buffer(new char[bufferSize])
-#endif
+// #endif
     , flags(kNoneEvent)
 {}
 

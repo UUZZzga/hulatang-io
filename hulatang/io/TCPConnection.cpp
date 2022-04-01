@@ -46,7 +46,7 @@ void TCPConnection::connectEstablished(base::FileDescriptor &&fd)
     channel->setMessageCallback([_this = conn](const base::Buf &buf) { _this->messageCallback(_this, buf); });
 
     watcher->setReadHandler([_this = channel](char *buf, size_t n) { _this->recvByteNum(buf, n); });
-    watcher->setWriteHandler([_this = channel](size_t n) { _this->sendByteNum(n); });
+    watcher->setWriteHandler([_this = channel](char *buf, size_t n) { _this->sendByteNum(buf, n); });
     watcher->setCloseHandler([_this = channel] { _this->close(); });
     channel->enableReading();
     connectionCallback(conn);
