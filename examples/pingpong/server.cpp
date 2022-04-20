@@ -6,9 +6,6 @@
 
 #include <utility>
 
-#include <cstdio>
-#include <winsock2.h>
-
 using namespace hulatang::base;
 using namespace hulatang::io;
 
@@ -27,8 +24,6 @@ void onMessage(const TCPConnectionPtr &conn, const Buf &buf)
 
 int main(int argc, char *argv[])
 {
-    WSADATA wsaData;
-    WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (argc < 4)
     {
         fprintf(stderr, "Usage: server <address> <port> <threads>\n");
@@ -58,6 +53,4 @@ int main(int argc, char *argv[])
         server.start();
         loop.run();
     }
-
-    WSACleanup();
 }

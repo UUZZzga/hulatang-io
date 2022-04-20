@@ -6,7 +6,7 @@ local sources = {
 target("hulatang_base")
     set_kind("static")
     add_packages("fmt", "spdlog", {public = true})
-    add_packages("backward-cpp")
+    add_packages("backward-cpp", {public = true})
     add_deps("config")
 
     set_options("disable_logging")

@@ -1,6 +1,5 @@
 #include "hulatang/base/def.h"
 #include "hulatang/base/Exception.hpp"
-#include <corecrt_wstdio.h>
 #include <cstdio>
 
 HLT_NOINLINE void test()

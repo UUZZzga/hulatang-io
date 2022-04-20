@@ -207,7 +207,7 @@ void LocalFile::onError(std::error_condition &ec)
 void LocalFile::updatePosition(size_t offset)
 {
     pos_ += offset;
-#if defined(HLT_PLATFORM_WINDOWS)
+#if HLT_PLATFORM_WINDOWS
     fd_.updatePosition(pos_);
 #endif
 }

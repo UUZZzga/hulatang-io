@@ -10,12 +10,12 @@ class IOCPFdEventManager : public FdEventManager
 {
 public:
     explicit IOCPFdEventManager(EventLoop *loop);
-    ~IOCPFdEventManager();
+    ~IOCPFdEventManager() override;
 
     void process(microseconds blockTime) override;
 
     void add(const FdEventWatcherPtr &watcher, const base::FileDescriptor &descriptor) override;
-    void cancel(const FdEventWatcherPtr &watcher) override;
+    void cancel(const FdEventWatcherPtr &watcher, const base::FileDescriptor &fd) override;
 
     void wakeup() override;
 

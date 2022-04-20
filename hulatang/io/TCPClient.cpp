@@ -15,7 +15,7 @@ TCPClient::TCPClient(EventLoop *_loop, InetAddress _address)
 
 void TCPClient::connect()
 {
-    HLT_CORE_INFO("TCPClient::connect[{}] - connecting to {}", "", address.toString());
+    HLT_CORE_DEBUG("TCPClient::connect[{}] - connecting to {}", "", address.toString());
     connect_ = true;
     connector->start();
 }

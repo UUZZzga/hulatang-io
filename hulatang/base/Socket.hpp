@@ -1,11 +1,12 @@
 #ifndef HULATANG_BASE_SOCKET_HPP
 #define HULATANG_BASE_SOCKET_HPP
 
-#include "Config.h"
+#include "hulatang/base/def.h"
 
 #include <cstdint>
 
 #if HLT_PLATFORM_WINDOWS
+#    include <ws2tcpip.h>
 #else
 #    include <netinet/in.h>
 #endif

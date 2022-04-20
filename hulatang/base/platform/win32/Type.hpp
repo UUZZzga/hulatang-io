@@ -13,6 +13,10 @@
 #include <Mswsock.h>
 
 namespace hulatang::base {
+using socket::fd_t;
+using socket::FdNull;
+using socket::sockaddr_u;
+
 enum class Type
 {
     NONE,
@@ -25,7 +29,7 @@ enum class Type
 struct IO_DATA
 {
     OVERLAPPED overlapped;
-    char *buf;
+    Buf buf;
     Type operationType;
 };
 
@@ -36,6 +40,7 @@ struct FileDescriptor::Impl
     fd_t fd;
     char lpOutputBuf[128];
     DWORD dwBytes;
+    int af;
 };
 } // namespace hulatang::base
 

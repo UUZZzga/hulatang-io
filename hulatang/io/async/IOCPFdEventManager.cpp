@@ -51,8 +51,11 @@ void IOCPFdEventManager::process(microseconds blockTime)
         {
             return;
         }
-
-        auto *watcher = reinterpret_cast<FdEventWatcher *>(ptr);
+        // auto *watcher = reinterpret_cast<FdEventWatcher *>(ptr);
+        if (!watchers[ptr]) {
+            return;
+        }
+        auto *watcher = watchers[ptr].get();
 
         if (bRet == FALSE)
         {
@@ -82,7 +85,7 @@ void IOCPFdEventManager::process(microseconds blockTime)
         }
         auto *data = CONTAINING_RECORD(pOverlapped, base::IO_DATA, overlapped);
         auto type = data->operationType;
-        // data->operationType = base::Type::NONE;
+        data->operationType = base::Type::NONE;
         switch (type)
         {
         case OPEN: {
@@ -96,13 +99,11 @@ void IOCPFdEventManager::process(microseconds blockTime)
         break;
         case READ: {
             // HLT_CORE_WARN("read data: {}, bytes: {}", static_cast<void *>(data), bytes);
-            watcher->readHandle(data->buf, bytes);
+            watcher->readHandle(data->buf.buf, bytes);
         }
         break;
         case WRITE: {
-            // assert(bytes != 0);
-            // HLT_CORE_WARN("write data: {}, bytes: {}", static_cast<void *>(data), bytes);
-            watcher->writeHandle(bytes);
+            watcher->writeHandle(data->buf.buf, data->buf.len);
         }
         break;
         default: {
@@ -115,12 +116,13 @@ void IOCPFdEventManager::process(microseconds blockTime)
 void IOCPFdEventManager::add(const FdEventWatcherPtr &watcher, const base::FileDescriptor &descriptor)
 {
     FdEventManager::add(watcher, descriptor);
-    CreateIoCompletionPort(reinterpret_cast<HANDLE>(descriptor.getFd()), iocpHandle, reinterpret_cast<ULONG_PTR>(watcher.get()), 0);
+    // CreateIoCompletionPort(reinterpret_cast<HANDLE>(descriptor.getFd()), iocpHandle, reinterpret_cast<ULONG_PTR>(watcher.get()), 0);
+    CreateIoCompletionPort(reinterpret_cast<HANDLE>(descriptor.getFd()), iocpHandle, static_cast<ULONG_PTR>(descriptor.getFd()), 0);
 }
 
-void IOCPFdEventManager::cancel(const FdEventWatcherPtr &watcher)
+void IOCPFdEventManager::cancel(const FdEventWatcherPtr &watcher, const base::FileDescriptor &fd)
 {
-    FdEventManager::cancel(watcher);
+    FdEventManager::cancel(watcher, fd);
     // disableAll();
 }
 

@@ -1,7 +1,8 @@
-#ifndef MYNET_TCP_CONNECTION_HPP_
-#define MYNET_TCP_CONNECTION_HPP_
+#ifndef HULATANG_IO_SOCKETCHANNEL_HPP
+#define HULATANG_IO_SOCKETCHANNEL_HPP
 
 #include "hulatang/base/Buf.hpp"
+#include "hulatang/base/Buffer.hpp"
 #include "hulatang/base/Log.hpp"
 #include "hulatang/io/Channel.hpp"
 #include "hulatang/io/EventLoop.hpp"
@@ -21,7 +22,7 @@ public:
     typedef std::function<void(const base::Buf &)> MessageCallback;
 
 public:
-    SocketChannel(EventLoop *loop, base::FileDescriptor &&fd, FdEventWatcherPtr _watcher);
+    SocketChannel(EventLoop *loop, base::FileDescriptor &&fd, FdEventWatcherPtr _watcher, std::shared_ptr<void> _tie);
 
     ~SocketChannel() override;
 
@@ -57,6 +58,7 @@ public:
     void handleRead() override;
 
     void postRead();
+    void postWrite();
 
 private:
     void sendInLoop(const base::Buf &buf);
@@ -68,13 +70,13 @@ private:
 private:
     DefaultCallback connectionCallback;
     MessageCallback messageCallback;
-
     std::weak_ptr<FdEventWatcher> watcher;
+    std::shared_ptr<void> tie;
+    base::Buffer sendBuffer;
     size_t triggerByteNum;
     std::mutex writeLock;
-    size_t waitSendByteNum;
-    size_t waitSendCacheByteNum;
     size_t finishedSendByteNum;
+    bool closed;
 };
 
 inline void SocketChannel::setConnectionCallback(const DefaultCallback &connectionCallback)
@@ -93,4 +95,5 @@ inline void SocketChannel::setMessageCallback(const MessageCallback &messageCall
 }
 
 } // namespace hulatang::io
-#endif // MYNET_TCP_CONNECTION_HPP_
+
+#endif // HULATANG_IO_SOCKETCHANNEL_HPP

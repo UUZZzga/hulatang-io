@@ -5,6 +5,8 @@
 #include "hulatang/base/Log.hpp"
 #include "hulatang/base/String.hpp"
 
+#include "hulatang/io/NetInit.hpp"
+
 #include <chrono>
 #include <memory>
 #include <thread>
@@ -25,6 +27,7 @@ EventLoop::EventLoop()
     : currentTime(0)
     , timerEventManager(this)
 {
+    NetInit::init();
     init();
 }
 

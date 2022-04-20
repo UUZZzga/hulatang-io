@@ -4,13 +4,13 @@
 
 namespace hulatang::io {
 
-SocketChannel::SocketChannel(EventLoop *loop, base::FileDescriptor &&fd, FdEventWatcherPtr _watcher)
+SocketChannel::SocketChannel(EventLoop *loop, base::FileDescriptor &&fd, FdEventWatcherPtr _watcher, std::shared_ptr<void> _tie)
     : Channel(loop, std::move(fd))
     , watcher(_watcher)
+    , tie(_tie)
     , triggerByteNum(0)
-    , waitSendByteNum(0)
-    , waitSendCacheByteNum(0)
     , finishedSendByteNum(0)
+    , closed(false)
 {}
 
 SocketChannel::~SocketChannel()
@@ -46,9 +46,20 @@ void SocketChannel::handleRead(const base::Buf &buf)
     }
     std::error_condition ec;
     fd.read(buf, ec);
-    if (ec && ec.value() == base::FileErrorCode::RESET)
+    if (ec)
     {
-        forceCloseInLoop();
+        if (ec.value() == base::FileErrorCode::EEOF)
+        {
+            // �յ� FIN
+            disableReading();
+        }
+        else if (ec.value() == base::FileErrorCode::RESET)
+        {
+            // ��Ϊ���� handleRead �� messageCallback
+            // ���̹رպ� messageCallback ���޷�����д��
+            // �Ӻ�close ��messageCallback��д�벻�����쳣
+            loop->queueInLoop([_this = shared_from_this()] { _this->forceCloseInLoop(); });
+        }
     }
 }
 
@@ -66,29 +77,24 @@ bool SocketChannel::send(const base::Buf &buf)
 void SocketChannel::sendInLoop(const base::Buf &buf)
 {
     loop->assertInLoopThread();
-    if (isWriting())
-    {
-        abort();
-    }
-    // disableWriting in down
+    sendBuffer.append(buf.buf, buf.len);
     enableWriting();
-    waitSendByteNum = buf.len;
-    std::error_condition ec;
-    fd.write(buf, ec);
-    if (ec && ec.value() == base::FileErrorCode::RESET)
-    {
-        forceCloseInLoop();
-    }
 }
 
 void SocketChannel::forceCloseInLoop()
 {
     loop->assertInLoopThread();
+    if (closed)
+    {
+        return;
+    }
+    closed = true;
     auto ptr = watcher.lock();
     assert(ptr);
     connectionCallback(shared_from_this());
     loop->getFdEventManager().cancel(ptr, fd);
     fd.close();
+    tie.reset();
 }
 
 void SocketChannel::runSend(const base::Buf &buf)
@@ -100,16 +106,14 @@ void SocketChannel::runSend(const base::Buf &buf)
 void SocketChannel::sendByteNum(char *buf, size_t num)
 {
     loop->assertInLoopThread();
-    waitSendByteNum -= num;
-    if (waitSendByteNum == 0)
+    sendBuffer.retrieveAsString(num);
+    if (sendBuffer.readableBytes() == 0)
     {
         disableWriting();
     }
     else
     {
-        assert(HLT_PLATFORM_WINDOWS == 0);
-        std::error_condition condition;
-        fd.write({buf + num, waitSendByteNum}, condition);
+        postWrite();
     }
 }
 void SocketChannel::recvByteNum(char *buf, size_t num)
@@ -119,8 +123,8 @@ void SocketChannel::recvByteNum(char *buf, size_t num)
         forceCloseInLoop();
         return;
     }
-    messageCallback(base::Buf{buf, num});
     handleRead(base::Buf{buf, num});
+    messageCallback(base::Buf{buf, num});
 }
 
 void SocketChannel::update(int oldflag)
@@ -128,14 +132,12 @@ void SocketChannel::update(int oldflag)
     if ((oldflag & kReadEvent) == 0 && (flags & kReadEvent) != 0)
     {
         postRead();
-        loop->getFdEventManager().add(watcher.lock(), fd);
     }
-    if ((oldflag & kWriteEvent) != 0 || (flags & kWriteEvent) != 0)
+    if ((oldflag & kWriteEvent) == 0 && (flags & kWriteEvent) != 0)
     {
-        std::error_condition condition;
-        fd.write({}, condition);
-        loop->getFdEventManager().add(watcher.lock(), fd);
+        postWrite();
     }
+    loop->getFdEventManager().change(fd);
 }
 
 void SocketChannel::handleRead() {}
@@ -146,4 +148,14 @@ void SocketChannel::postRead()
     fd.read({buffer.get(), bufferSize}, condition);
 }
 
+void SocketChannel::postWrite()
+{
+    base::Buf buf(const_cast<char *>(sendBuffer.data()), sendBuffer.size());
+    std::error_condition ec;
+    fd.write(buf, ec);
+    if (ec && ec.value() == base::FileErrorCode::RESET)
+    {
+        forceCloseInLoop();
+    }
+}
 } // namespace hulatang::io

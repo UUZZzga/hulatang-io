@@ -179,37 +179,21 @@ int64_t lseek(fd_t fd, int64_t offset, int whence, std::error_code &ec) noexcept
     return li.QuadPart;
 }
 
-fd_t bind(sockaddr *addr, size_t len, std::error_code &ec) noexcept
+void bind(fd_t fd, sockaddr *addr, size_t len, std::error_code &ec) noexcept
 {
-    fd_t fd = FdNull;
-    fd = WSASocketW(addr->sa_family, SOCK_STREAM, IPPROTO_TCP, nullptr, 0, WSA_FLAG_OVERLAPPED);
-    if (INVALID_SOCKET == fd)
-    {
-        return FdNull;
-    }
+    assert(fd & socketFlag);
+    fd  = fd & (~socketFlag);
 
-    auto error = [&](int err = -1) {
-        closesocket(fd);
-        if (err == -1)
-        {
-            err = WSAGetLastError();
-        }
-        ec = make_win32_error_code(err);
-        return FdNull;
-    };
     if (addr != nullptr)
     {
         if (SOCKET_ERROR == bind(fd, addr, implicit_cast<DWORD>(len)))
         {
             int err = WSAGetLastError();
-            if (ERROR_IO_PENDING != err)
-            {
-                return error(err);
-            }
+            closesocket(fd);
+            ec = make_win32_error_code(err);
+            return;
         }
     }
-    assert((fd & socketFlag) == 0);
-    return fd | socketFlag;
 }
 
 void listen(fd_t fd, std::error_code &ec)
@@ -228,13 +212,13 @@ void listen(fd_t fd, std::error_code &ec)
     }
 }
 
-void accept(fd_t listen, fd_t &accept, char *buf, IO_DATA &data, std::error_code &ec)
+void accept(fd_t listen, fd_t &accept, int af, char *buf, IO_DATA &data, std::error_code &ec)
 {
     if ((listen & socketFlag) != 0U)
     {
         DWORD dwBytes = 0;
         listen = listen & (~socketFlag);
-        accept = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, 0, WSA_FLAG_OVERLAPPED);
+        accept = WSASocketW(af, SOCK_STREAM, IPPROTO_TCP, nullptr, 0, WSA_FLAG_OVERLAPPED);
         if (INVALID_SOCKET == accept)
         {
             ec = make_win32_error_code(WSAGetLastError());
@@ -283,7 +267,7 @@ void read(fd_t fd, const Buf &buf, IO_DATA &data, std::error_code &ec) noexcept
         fd = fd & (~socketFlag);
 
         WSABUF wsabuf{.len = static_cast<ULONG>(buf.len), .buf = buf.buf};
-        data.buf = buf.buf;
+        data.buf = buf;
         DWORD flags = 0;
         if (SOCKET_ERROR == WSARecv(fd, &wsabuf, 1, nullptr, &flags, &data.overlapped, nullptr))
         {
@@ -294,7 +278,7 @@ void read(fd_t fd, const Buf &buf, IO_DATA &data, std::error_code &ec) noexcept
     {
         LARGE_INTEGER fileSize;
         LARGE_INTEGER filePointer;
-        data.buf = buf.buf;
+        data.buf = buf;
         size_t bufLen = buf.len;
         BOOL bRet = ::GetFileSizeEx(reinterpret_cast<HANDLE>(fd), &fileSize);
         if (bRet == 0)
@@ -330,7 +314,7 @@ void write(fd_t fd, const Buf &buf, IO_DATA &data, std::error_code &ec) noexcept
 
         WSABUF wsabuf{.len = static_cast<ULONG>(buf.len), .buf = buf.buf};
         DWORD flags = 0;
-        data.buf = buf.buf;
+        data.buf = buf;
 
         if (SOCKET_ERROR == WSASend(fd, &wsabuf, 1, nullptr, flags, &data.overlapped, nullptr))
         {
@@ -339,7 +323,7 @@ void write(fd_t fd, const Buf &buf, IO_DATA &data, std::error_code &ec) noexcept
     }
     else
     {
-        data.buf = buf.buf;
+        data.buf = buf;
         BOOL bRet = ::WriteFile(reinterpret_cast<HANDLE>(fd), buf.buf, static_cast<DWORD>(buf.len), nullptr, &data.overlapped);
         if (bRet == 0)
         {
@@ -365,7 +349,11 @@ void close(fd_t fd) noexcept
 namespace hulatang::base {
 FileDescriptor::FileDescriptor() = default;
 
-FileDescriptor::~FileDescriptor() noexcept = default;
+FileDescriptor::~FileDescriptor() noexcept {
+    if (impl) {
+        close();
+    }
+}
 
 FileDescriptor::FileDescriptor(FileDescriptor &&other) noexcept
     : impl(move(other.impl))
@@ -432,18 +420,32 @@ void FileDescriptor::updatePosition(uint64_t position)
 #endif
 }
 
-void FileDescriptor::bind(sockaddr *addr, size_t len)
+void FileDescriptor::socket(sockaddr *addr, size_t len)
 {
     assert(!impl);
+    fd_t fd = FdNull;
+    fd = WSASocketW(addr->sa_family, SOCK_STREAM, IPPROTO_TCP, nullptr, 0, WSA_FLAG_OVERLAPPED);
+    if (INVALID_SOCKET == fd)
+    {
+        return;
+    }
+    assert((fd & socketFlag) == 0);
+    fd = fd | socketFlag;
+    impl = std::make_unique<Impl>();
+    impl->fd = fd;
+}
+
+void FileDescriptor::bind(sockaddr *addr, size_t len)
+{
+    assert(impl);
     std::error_code ec;
-    impl::fd_t fd = impl::bind(addr, len, ec);
+    impl::bind(impl->fd, addr, len, ec);
     if (ec)
     {
         HLT_CORE_WARN("error code: {}, message: {}", ec.value(), ec.message());
         return;
     }
-    impl = std::make_unique<Impl>();
-    impl->fd = fd;
+    impl->af = addr->sa_family;
 }
 
 void FileDescriptor::listen(std::error_condition &condition)
@@ -459,7 +461,7 @@ void FileDescriptor::accept(FileDescriptor &fd, std::error_condition &condition)
     assert(!fd.impl);
     fd.impl = std::make_unique<Impl>();
     std::error_code ec;
-    impl::accept(impl->fd, fd.impl->fd, impl->lpOutputBuf, impl->recvData, ec);
+    impl::accept(impl->fd, fd.impl->fd, fd.impl->af, impl->lpOutputBuf, impl->recvData, ec);
     if (!ec)
     {
         fd.impl->recvData.operationType = hulatang::base::Type::OPEN;
@@ -515,6 +517,18 @@ void FileDescriptor::read(const Buf &buf, std::error_condition &condition) noexc
             assert(impl->recvData.operationType != Type::NONE);
             return;
         }
+        case WSAECONNABORTED: {
+            // 收到FIN后读取
+            // unix下是read返回0
+            // 
+            // 读取的流程是
+            // 先判断 num == 0 关闭连接
+            // FileDescriptor::read 也就是本函数
+            // 最后执行 messageCallback
+            // 不能立刻
+            condition = make_file_error_condition(FileErrorCode::EEOF);
+            return;
+        }
         case WSAECONNRESET: {
             condition = make_file_error_condition(FileErrorCode::RESET);
             return;
@@ -542,6 +556,12 @@ void FileDescriptor::write(const Buf &buf, std::error_condition &condition) noex
             assert(impl->sendData.operationType != Type::NONE);
             return;
         }
+        case WSAECONNABORTED:
+            // 接收方从不确认（ACK）在数据流套接字上发送的数据
+            // 也就是超时
+            // 
+            // 此时不能写入、不能读取
+            // 最好的办法是尽快关闭
         case WSAECONNRESET: {
             condition = make_file_error_condition(FileErrorCode::RESET);
             return;
@@ -550,6 +570,7 @@ void FileDescriptor::write(const Buf &buf, std::error_condition &condition) noex
     }
     HLT_CORE_WARN("error code: {}, message: {}", ec.value(), ec.message());
     impl->sendData.operationType = Type::NONE;
+    abort();
 }
 
 void FileDescriptor::close() noexcept

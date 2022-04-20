@@ -1,5 +1,5 @@
-#ifndef HULATANG_IO_ACCEPTOR_HPP_
-#define HULATANG_IO_ACCEPTOR_HPP_
+#ifndef HULATANG_IO_ACCEPTOR_HPP
+#define HULATANG_IO_ACCEPTOR_HPP
 
 #include "hulatang/base/File.hpp"
 #include "hulatang/io/FdEventWatcher.hpp"
@@ -43,4 +43,5 @@ private:
     NewConnectionCallback newConnectionCallback;
 };
 } // namespace hulatang::io
-#endif // HULATANG_IO_ACCEPTOR_HPP_
+
+#endif // HULATANG_IO_ACCEPTOR_HPP

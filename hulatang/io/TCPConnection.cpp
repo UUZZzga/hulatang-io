@@ -41,13 +41,16 @@ void TCPConnection::connectEstablished(base::FileDescriptor &&fd)
     assert(!watcherWPtr.expired());
     auto conn = shared_from_this();
     FdEventWatcherPtr watcher = watcherWPtr.lock();
-    channel = std::make_shared<SocketChannel>(loop, std::move(fd), watcher);
-    channel->setConnectionCallback([_this = conn](auto &) { _this->connectDestroyed(); });
-    channel->setMessageCallback([_this = conn](const base::Buf &buf) { _this->messageCallback(_this, buf); });
+    channel = std::make_shared<SocketChannel>(loop, std::move(fd), watcher, conn);
+    channel->setConnectionCallback([this](auto &) { connectDestroyed(); });
+    channel->setMessageCallback([this](const base::Buf &buf) { messageCallback(shared_from_this(), buf); });
 
-    watcher->setReadHandler([_this = channel](char *buf, size_t n) { _this->recvByteNum(buf, n); });
-    watcher->setWriteHandler([_this = channel](char *buf, size_t n) { _this->sendByteNum(buf, n); });
-    watcher->setCloseHandler([_this = channel] { _this->close(); });
+    watcher->setReadHandler([_this = channel.get()](char *buf, size_t n) { _this->recvByteNum(buf, n); });
+    watcher->setWriteHandler([_this = channel.get()](char *buf, size_t n) { _this->sendByteNum(buf, n); });
+    watcher->setCloseHandler([_this = channel]() mutable {
+        _this->close();
+        _this.reset();
+    });
     channel->enableReading();
     connectionCallback(conn);
 }
@@ -62,7 +65,7 @@ void TCPConnection::connectDestroyed()
 
         auto ptr = shared_from_this();
         connectionCallback(ptr);
+        closeCallback(ptr);
     }
-    // channel->remove();
 }
 } // namespace hulatang::io

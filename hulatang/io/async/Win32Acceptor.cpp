@@ -10,6 +10,7 @@ Acceptor::Acceptor(EventLoop *_loop, const InetAddress &address)
     : loop(_loop)
     , threadPool(nullptr)
 {
+    acceptFd.socket(address.getSockaddr(), address.sockaddrLength());
     acceptFd.bind(address.getSockaddr(), address.sockaddrLength());
 }
 
@@ -49,7 +50,10 @@ void Acceptor::acceptInLoop()
     auto *nextLoop = threadPool->getNextLoop();
     FdEventWatcherPtr watcher = std::make_shared<FdEventWatcher>(nextLoop);
     nextLoop->getFdEventManager().add(watcher, newFd);
-    watcher->setCloseHandler([nextLoop, watcher] { nextLoop->getFdEventManager().cancel(watcher); });
+    watcher->setCloseHandler([nextLoop, watcher] {
+        // nextLoop->getFdEventManager().cancel(watcher);
+        abort();
+    });
 
     newConnectionCallback(
         base::FileDescriptor{std::move(newFd)}, watcher, InetAddress::copyFromNative(acceptFd.peeraddr(), acceptFd.peeraddrLength()));

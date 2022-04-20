@@ -21,13 +21,16 @@ public:
     virtual void process(microseconds blockTime);
 
     virtual void add(const FdEventWatcherPtr &watcher, const base::FileDescriptor &fd);
-    virtual void cancel(const FdEventWatcherPtr &watcher, const base::FileDescriptor &fd) {}
+    virtual void change(const base::FileDescriptor &fd);
+    virtual void cancel(const FdEventWatcherPtr &watcher, const base::FileDescriptor &fd);
 
     static std::unique_ptr<FdEventManager> create(EventLoop *loop);
 
     virtual void wakeup();
 
 protected:
+    [[nodiscard]] FdEventWatcherPtr getWatcher(const base::FileDescriptor &fd) const;
+
     EventLoop *loop;
     std::vector<FdEventWatcherPtr> watchers;
 };

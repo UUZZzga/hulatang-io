@@ -8,8 +8,8 @@
 
 using hulatang::base::Buffer;
 using hulatang::base::Log;
-using hulatang::base::O_READ;
-using hulatang::base::O_WRITE;
+using hulatang::base::READ;
+using hulatang::base::WRITE;
 using hulatang::file::LocalFile;
 using hulatang::io::EventLoop;
 using std::error_condition;
@@ -40,13 +40,13 @@ int main(int _argc, const char **_argv)
         });
 
         {
-            fileRead->open(fileName, O_READ);
+            fileRead->open(fileName, READ);
         }
 
         fileRead->read(data.size());
     });
     {
-        file.create(fileName, O_WRITE);
+        file.create(fileName, WRITE);
     }
     file.write(data);
     loop.run();

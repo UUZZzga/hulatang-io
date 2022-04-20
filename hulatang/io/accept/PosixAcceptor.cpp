@@ -13,7 +13,7 @@ Acceptor::Acceptor(EventLoop *_loop, const InetAddress &address)
     : loop(_loop)
     , threadPool(nullptr)
 {
-    HLT_CORE_TRACE("address: {}", address.toString());
+    acceptFd.socket(address.getSockaddr(), address.sockaddrLength());
     acceptFd.bind(address.getSockaddr(), address.sockaddrLength());
 }
 
@@ -53,19 +53,23 @@ void Acceptor::acceptInLoop()
     base::socket::sockaddr_u sockaddr{};
     size_t addrlen = 0;
 
-    auto fd = base::FileDescriptor(base::socket::accept(acceptFd.getFd(), &sockaddr, &addrlen));
-    newFd.swap(fd);
+    auto sockfd = base::socket::accept(acceptFd.getFd(), &sockaddr, &addrlen);
+    if (sockfd >= 0)
+    {
+        auto fd = base::FileDescriptor(sockfd);
+        newFd.swap(fd);
 
-    auto *nextLoop = threadPool->getNextLoop();
-    FdEventWatcherPtr watcher = std::make_shared<FdEventWatcher>(nextLoop);
-    newFd.getImpl()->watcher = watcher.get();
-    watcher->setCloseHandler([nextLoop, watcher] {
-        //  nextLoop->getFdEventManager().cancel(watcher, fd);
-        abort();
-    });
-    // nextLoop->getFdEventManager().add(watcher, newFd);
+        auto *nextLoop = threadPool->getNextLoop();
+        FdEventWatcherPtr watcher = std::make_shared<FdEventWatcher>(nextLoop);
+        newFd.getImpl()->watcher = watcher.get();
+        watcher->setCloseHandler([nextLoop, watcher] {
+            //  nextLoop->getFdEventManager().cancel(watcher, fd);
+            abort();
+        });
+        nextLoop->getFdEventManager().add(watcher, newFd);
 
-    newConnectionCallback(base::FileDescriptor{std::move(newFd)}, watcher, InetAddress::copyFromNative(&sockaddr.sa, addrlen));
+        newConnectionCallback(base::FileDescriptor{std::move(newFd)}, watcher, InetAddress::copyFromNative(&sockaddr.sa, addrlen));
+    }
     acceptFd.accept(newFd, condition);
 }
 } // namespace hulatang::io

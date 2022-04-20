@@ -2,7 +2,6 @@
 #define HULATANG_BASE_FILE_HPP
 
 #include "hulatang/base/Socket.hpp"
-#include "hulatang/base/def.h"
 #include "hulatang/base/Buf.hpp"
 #include <cstdint>
 #include <memory>
@@ -43,11 +42,15 @@ public:
     // lseek
     int64_t lseek(int64_t offset, int whence, std::error_condition &condition);
 
-#if defined(HLT_PLATFORM_WINDOWS)
+#if HLT_PLATFORM_WINDOWS
     void updatePosition(uint64_t position);
 #endif
 
     // ======================= socket ==================================
+
+    // socket
+    void socket(sockaddr *addr, size_t len);
+
     // bind
     void bind(sockaddr *addr, size_t len);
 
@@ -96,6 +99,7 @@ enum FileErrorCode : int
     CONNECTING,
     _ERROR,
     RESET,
+    EEOF,
     NOT_FOUND = _ERROR,
     DEADLINE_EXCEEDED,
     OUT_OF_RANGE,

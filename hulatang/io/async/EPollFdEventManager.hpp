@@ -7,7 +7,7 @@
 #include "hulatang/io/FdEventWatcher.hpp"
 #include <vector>
 
-#if !(defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE1))
+#if !(defined(HAVE_EPOLL_CREATE) || defined(HAVE_EPOLL_CREATE1))
 #    error "Not Supported"
 #endif
 
@@ -18,11 +18,12 @@ class EPollFdEventManager : public FdEventManager
 {
 public:
     explicit EPollFdEventManager(EventLoop *loop);
-    ~EPollFdEventManager();
+    ~EPollFdEventManager() override;
 
     void process(microseconds blockTime) override;
 
     void add(const FdEventWatcherPtr &watcher, const base::FileDescriptor &fd) override;
+    void change(const base::FileDescriptor &fd) override;
     void cancel(const FdEventWatcherPtr &watcher, const base::FileDescriptor &fd) override;
 
     void wakeup() override;
@@ -30,11 +31,9 @@ public:
 private:
     void processEvent(int numEvents);
 
-private:
     int epollFd;
     using EventList = std::vector<struct epoll_event>;
     EventList events;
-    std::vector<FdEventWatcher *> watchers;
 };
 } // namespace hulatang::io
 

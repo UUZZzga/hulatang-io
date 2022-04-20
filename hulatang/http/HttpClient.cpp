@@ -23,7 +23,7 @@ void HttpClient::get(std::string_view urlStr, RequestCallback cb)
     request.setVersion(Version::Http11);
     request.setMethod(HttpRequest::Method::GET);
     request.addHeader("Host", url.host());
-    request.addHeader("Accept", "application/json");
+    request.addHeader("Accept", "text/html");
     // request.addHeader("Accept-Encoding", "gzip");
     // request.addHeader("Accept-Language", "en-US");
     get(url, request, cb);
@@ -70,7 +70,10 @@ void HttpClient::onMessage(const TCPConnectionPtr &conn, const base::Buf &buf)
     HttpResponse response = HttpResponse::buildFromBuffer(readBuffer_, ec);
     if (ec)
     {
-        HLT_CORE_WARN("HttpClient error: {}", ec.value());
+        if (ec.value() != HttpResponse::WaitForData)
+        {
+            HLT_CORE_WARN("HttpClient error: {}", ec.value());
+        }
         return;
     }
     requestCallback_(response);

@@ -12,8 +12,19 @@ option_end()
 -- 拉取远程依赖
 add_requires("gtest 1.11.0")
 add_requires("spdlog 1.9.2", {system = false, configs = {fmt_external = true}})
-add_requires("backward-cpp v1.6") -- 堆栈跟踪
 add_requires("concurrentqueue")
+
+-- 堆栈跟踪
+add_requires("backward-cpp v1.6")
+if is_host("windows") then
+    add_syslinks("PSAPI", "DbgHelp")
+elseif is_host("linux") then
+    -- if linuxos.name() == "ubuntu" then
+    --     add_requires("apt::libdw-dev", {alias = "libdw"})
+    --     add_packages("libdw")
+    --     add_defines("BACKWARD_HAS_DW=1")
+    -- end
+end
 
 -- 第三方依赖
 add_includedirs("3rdparty/magic_enum-0.7.3/include")
@@ -66,7 +77,7 @@ end
 
 --系统库
 if is_host("windows") then
-    add_syslinks("Ws2_32", "Mswsock", "Shell32", "PSAPI", "DbgHelp")
+    add_syslinks("Ws2_32", "Mswsock", "Shell32")
 elseif is_host("linux") then
     add_syslinks("pthread")
 end

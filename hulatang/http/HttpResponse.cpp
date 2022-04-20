@@ -13,15 +13,15 @@
 #include <unordered_map>
 
 namespace {
+using hulatang::http::HttpResponse::Body;
+using hulatang::http::HttpResponse::Messages;
+using hulatang::http::HttpResponse::NoError;
+using hulatang::http::HttpResponse::Status;
+using hulatang::http::HttpResponse::WaitForData;
+using ErrorCode = hulatang::http::HttpResponse::ErrorCode;
+
 struct HttpResponseBuilder
 {
-    enum ErrorCode
-    {
-        NoError,
-        Status,
-        Messages,
-        Body,
-    };
     hulatang::http::HttpResponse::HeaderMap headers;
     std::string body;
     hulatang::base::Buffer *buf{};
@@ -105,6 +105,7 @@ struct HttpResponseBuilder
 
     void transferEncoding()
     {
+        code = WaitForData;
         while (true)
         {
             nextLine();
@@ -148,6 +149,7 @@ struct HttpResponseBuilder
     void contentLength(size_t len)
     {
         // TODO 还未实现
+        code = WaitForData;
         if (buf->readableBytes() < readNumber + len + 2)
         {
             // 还没读完
@@ -180,10 +182,12 @@ struct HttpResponseBuilder
 class HttpResponseParams : public std::error_category
 {
 public:
+#if HLT_PLATFORM_WINDOWS
     constexpr static uintptr_t ERROR_ADDR = 0xfa1a35;
     constexpr HttpResponseParams() noexcept
         : error_category(ERROR_ADDR)
     {}
+#endif
 
     [[nodiscard]] const char *name() const noexcept override
     {
@@ -191,7 +195,7 @@ public:
     }
     [[nodiscard]] std::string message(int _Errval) const override
     {
-        auto name = magic_enum::enum_name(static_cast<HttpResponseBuilder::ErrorCode>(_Errval));
+        auto name = magic_enum::enum_name(static_cast<ErrorCode>(_Errval));
         return std::string{name};
     }
     static const HttpResponseParams &getInstance()
@@ -224,7 +228,7 @@ HttpResponse HttpResponse::buildFromBuffer(base::Buffer &buf, std::error_conditi
     builder.buf = &buf;
 
     builder.parse();
-    if (builder.code == HttpResponseBuilder::NoError)
+    if (builder.code == NoError)
     {
         return {std::move(builder.headers), std::move(builder.body), builder.status, builder.version};
     }

@@ -3,7 +3,6 @@
 #include "hulatang/io/TCPClient.hpp"
 #include "hulatang/io/TCPConnection.hpp"
 #include <chrono>
-#include <winsock2.h>
 
 using hulatang::base::Log;
 using hulatang::io::EventLoop;
@@ -12,9 +11,6 @@ using hulatang::io::TCPClient;
 
 int main(int _argc, const char **_argv)
 {
-    WSADATA wsaData;
-    WSAStartup(MAKEWORD(2, 2), &wsaData);
-
     Log::init();
     EventLoop loop;
     TCPClient client(&loop, InetAddress::fromHostnameAndService("localhost", "http"));
@@ -26,9 +22,8 @@ int main(int _argc, const char **_argv)
         conn->getLoop()->stop();
     });
 
-    loop.queueInLoop([&] { client.connect(); });
+    loop.queueInLoop([&client] { client.connect(); });
     loop.run();
 
-    WSACleanup();
     return 0;
 }

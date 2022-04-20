@@ -13,6 +13,15 @@ namespace hulatang::http {
 class HttpResponse
 {
 public:
+    enum ErrorCode
+    {
+        NoError,
+        Status,
+        Messages,
+        Body,
+        WaitForData,
+    };
+
     using HeaderMap = std::unordered_map<std::string, std::string>;
 
     HttpResponse();

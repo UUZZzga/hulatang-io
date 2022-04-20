@@ -12,6 +12,10 @@
 #include <sys/epoll.h>
 #include <unistd.h>
 
+#include <sys/resource.h>
+
+template class std::vector<struct epoll_event>;
+
 constexpr uintptr_t WAKEUP_NUMBER = 1;
 
 namespace hulatang::io {
@@ -32,7 +36,6 @@ EPollFdEventManager::EPollFdEventManager(EventLoop *loop)
     , epollFd(epoll_create(1024))
 #endif
     , events(128)
-    , watchers(128)
 {
 #ifndef HAVE_EPOLL_CREATE1
     int val = fcntl(epollFd, F_GETFD);
@@ -80,16 +83,17 @@ void EPollFdEventManager::process(microseconds blockTime)
     }
 }
 
-void EPollFdEventManager::add(const FdEventWatcherPtr &watcher, const base::FileDescriptor &fd)
+void epollCtl(int epollFd, int op, const base::FileDescriptor &fd)
 {
-    FdEventManager::add(watcher, fd);
-    auto fdNum = fd.getFd();
-
     auto *impl = const_cast<base::FileDescriptor::Impl *>(fd.getImpl());
     uint32_t events = 0;
     if (impl->accept)
     {
         events |= EPOLLIN;
+    }
+    else if (impl->connection)
+    {
+        events |= EPOLLOUT;
     }
     else
     {
@@ -103,29 +107,29 @@ void EPollFdEventManager::add(const FdEventWatcherPtr &watcher, const base::File
         }
     }
     epoll_event event{.events = events, .data = {.ptr = impl}};
-    auto idx = implicit_cast<size_t>(fdNum);
-    int op = watchers[idx] == nullptr ? EPOLL_CTL_ADD : EPOLL_CTL_MOD;
-    if (::epoll_ctl(epollFd, op, fdNum, &event) < 0)
+    if (::epoll_ctl(epollFd, op, impl->fd, &event) < 0)
     {
         int err = errno;
+        HLT_CORE_ERROR("error code: {}", err);
         abort();
     }
-    if (watchers.size() < idx)
-    {
-        watchers.resize(watchers.size() * 2);
-    }
-    assert(idx < watchers.size());
-    watchers[idx] = watcher.get();
+}
+
+void EPollFdEventManager::add(const FdEventWatcherPtr &watcher, const base::FileDescriptor &fd)
+{
+    FdEventManager::add(watcher, fd);
+    epollCtl(epollFd, EPOLL_CTL_ADD, fd);
+}
+
+void EPollFdEventManager::change(const base::FileDescriptor &fd)
+{
+    epollCtl(epollFd, EPOLL_CTL_MOD, fd);
 }
 
 void EPollFdEventManager::cancel(const FdEventWatcherPtr &watcher, const base::FileDescriptor &fd)
 {
     FdEventManager::cancel(watcher, fd);
     // disableAll();
-    auto idx = implicit_cast<size_t>(fd.getFd());
-    assert(idx < watchers.size());
-    assert(watchers[idx] != nullptr);
-    watchers[idx] = nullptr;
 }
 
 void EPollFdEventManager::wakeup() {}
@@ -133,50 +137,76 @@ void EPollFdEventManager::wakeup() {}
 void EPollFdEventManager::processEvent(int numEvents)
 {
     assert(implicit_cast<size_t>(numEvents) <= events.size());
-    size_t psize = 0;
-    for (auto &event : events)
+    for (size_t i = 0; i < numEvents; i++)
     {
+        auto &event = events[i];
         if (event.events == 0)
         {
             continue;
         }
         auto *impl = static_cast<base::FileDescriptor::Impl *>(event.data.ptr);
-        auto *watcher = watchers[impl->fd];
+        auto *watcher = watchers[impl->fd].get();
         assert(watcher != nullptr);
+        if (impl->connection && (event.events & (EPOLLOUT | EPOLLERR)) != 0)
+        {
+            int error = 0;
+            socklen_t errorsize = sizeof(error);
+            impl->connection = false;
+            getsockopt(impl->fd, SOL_SOCKET, SO_ERROR, &error, &errorsize);
+
+            // 判断连接成功
+            if (error == 0)
+            {
+                watcher->openHandle();
+                // 连接成功ACK分节可能和数据一起发送来
+                // 所以可以执行后面的逻辑
+            }
+            else
+            {
+                std::error_condition ec;
+                // TODO: error code
+                watcher->errorHandle(ec);
+                // 跳过读取
+                continue;
+            }
+        }
         if ((event.events & (EPOLLIN | EPOLLET | EPOLLHUP)) != 0)
         {
             // read event
-            ssize_t size;
-            if (impl->accept != 1U)
+            ssize_t size = 0;
+            if (!impl->accept)
             {
                 size = read(impl->fd, impl->readBuf.buf, impl->readBuf.len);
-                if (size < 0)
+            }
+            if (size < 0)
+            {
+                int err = errno;
+                switch (err)
                 {
-                    int err = errno;
-                    switch (err)
-                    {
-                    case EAGAIN:
+                case EAGAIN:
 #if EWOULDBLOCK != EAGAIN
-                    case EWOULDBLOCK:
+                case EWOULDBLOCK:
 #endif
-                    {
-                        // 没有请求
-                    }
-                    break;
+                {
+                    // 没有请求
+                }
+                break;
 
-                    case EINVAL:
-                    case EBADF:  // fd不是有效的文件描述符或未打开读取
-                    case EFAULT: // buf在您可访问的地址空间之外
-                    case EINTR:  // 在读取任何数据之前，被信号中断
-                    {
-                        // TODO
-                        abort();
-                    }
-                    break;
-                    }
+                case EINVAL:
+                case EBADF:  // fd不是有效的文件描述符或未打开读取
+                case EFAULT: // buf在您可访问的地址空间之外
+                case EINTR:  // 在读取任何数据之前，被信号中断
+                {
+                    // TODO
+                    abort();
+                }
+                break;
                 }
             }
-            watcher->readHandle(impl->readBuf.buf, implicit_cast<size_t>(size));
+            else
+            {
+                watcher->readHandle(impl->readBuf.buf, implicit_cast<size_t>(size));
+            }
         }
         if ((event.events & (EPOLLOUT | EPOLLET | EPOLLHUP)) != 0U)
         {
@@ -185,12 +215,19 @@ void EPollFdEventManager::processEvent(int numEvents)
             if (size >= 0)
             {
                 watcher->writeHandle(impl->writeBuf.buf, size);
+                impl->writeBuf.buf += size;
+                impl->writeBuf.len -= size;
             }
         }
-        psize++;
-        if (psize == implicit_cast<size_t>(numEvents))
+        if ((event.events & EPOLLRDHUP) != 0)
         {
-            break;
+            // 对端 shutdown(SHUT_WR)
+            // 本端 shutdown(SHUT_RD)
+        }
+        if ((event.events & EPOLLHUP) != 0)
+        {
+            // 两个方向上都已关闭
+            // 对端关闭套接字
         }
     }
 }

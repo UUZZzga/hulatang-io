@@ -91,6 +91,8 @@ void FileDescriptor::create(std::string_view path, OFlag oflag, std::error_condi
         break;
         }
     }
+    impl = std::make_unique<Impl>(Impl{nullptr});
+    impl->fd = fd;
 }
 
 int64_t FileDescriptor::lseek(int64_t offset, int whence, std::error_condition &condition)
@@ -99,22 +101,40 @@ int64_t FileDescriptor::lseek(int64_t offset, int whence, std::error_condition &
     // TODO ::lseek(int __fd, __off_t __offset, int __whence)
 }
 
-void FileDescriptor::bind(sockaddr *addr, size_t len)
+void FileDescriptor::socket(sockaddr *addr, size_t len)
 {
     assert(!impl);
+    int sockfd = ::socket(addr->sa_family, SOCK_STREAM, IPPROTO_TCP);
+    if (sockfd < 0)
+    {
+        abort();
+    }
+#if defined(SO_NOSIGPIPE)
+    {
+        int on = 1;
+        setsockopt(sockfd, SOL_SOCKET, SO_NOSIGPIPE, &on, sizeof(on));
+    }
+#endif
+    impl = std::make_unique<Impl>(Impl{nullptr});
+    impl->fd = sockfd;
+}
 
-    int fd = ::socket(addr->sa_family, SOCK_STREAM, IPPROTO_TCP);
+void FileDescriptor::bind(sockaddr *addr, size_t len)
+{
+    assert(impl);
+
+    {
+        int on = 1;
+        setsockopt(impl->fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+    }
     if (addr != nullptr)
     {
-        if (::bind(fd, addr, len) < 0)
+        if (::bind(impl->fd, addr, len) < 0)
         {
             int err = errno;
             HLT_ERROR("bind err:{}", err);
         }
     }
-
-    impl.reset(new Impl{nullptr});
-    impl->fd = fd;
 }
 
 void FileDescriptor::listen(std::error_condition &condition)
@@ -141,7 +161,7 @@ void FileDescriptor::listen(std::error_condition &condition)
             break;
         }
     }
-    impl->accept = 1;
+    impl->accept = true;
 }
 
 void FileDescriptor::accept(FileDescriptor &fd, std::error_condition &condition)
@@ -149,19 +169,33 @@ void FileDescriptor::accept(FileDescriptor &fd, std::error_condition &condition)
     assert(impl);
     assert(!fd.impl);
     condition = make_file_error_condition(FileErrorCode::CONNECTING);
+    fd.impl = std::make_unique<Impl>(Impl{nullptr});
 }
 
 void FileDescriptor::connect(sockaddr *addr, size_t len, std::error_condition &condition) noexcept
 {
     assert(impl);
-    ::connect(0, addr, len);
+    if (::connect(impl->fd, addr, len) < 0)
+    {
+        int err = errno;
+        if (err == EINPROGRESS)
+        {
+            condition = make_file_error_condition(FileErrorCode::CONNECTING);
+        }
+        else
+        {
+            // TODO 修改为 FileErrorCode
+            // condition.assign(err, std::system_category());
+            condition = make_file_error_condition(FileErrorCode::CONNECTION_REFUSED);
+        }
+    }
 }
 
 void FileDescriptor::read(const Buf &buf, std::error_condition &condition) noexcept
 {
     assert(impl);
     assert((impl->event & READ) == 0);
-    impl->read = 1;
+    impl->read = true;
     impl->readBuf = buf;
 }
 
@@ -169,14 +203,14 @@ void FileDescriptor::write(const Buf &buf, std::error_condition &condition) noex
 {
     assert(impl);
     assert((impl->event & FileDescriptor::Impl::WRITE) == 0);
-    impl->write = 1;
+    impl->write = true;
     impl->writeBuf = buf;
 }
 
 void FileDescriptor::close() noexcept
 {
     assert(impl);
-
+    HLT_TRACE("FileDescriptor::close fd: {}", impl->fd);
     if (::close(impl->fd) < 0)
     {
         int err = errno;

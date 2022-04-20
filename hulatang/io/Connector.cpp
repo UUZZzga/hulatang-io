@@ -5,6 +5,10 @@
 #include <chrono>
 #include <system_error>
 
+#ifdef min
+#    undef min
+#endif // min
+
 template<typename R, typename P>
 std::chrono::duration<R, P> min(std::chrono::duration<R, P> lhs, std::chrono::duration<R, P> rhs)
 {
@@ -35,8 +39,19 @@ void Connector::stop() {}
 
 void Connector::connect()
 {
-    //FIXME 改成socket
-    fd.bind(nullptr, 0);
+    fd.socket(address.getSockaddr(), address.sockaddrLength());
+#if HLT_PLATFORM_WINDOWS
+    // windows ��ִ�� ConnectEx ǰҪִ��bind
+    // ��Ȼ�� 10022
+    union
+    {
+        sockaddr addr;
+        base::socket::sockaddr_u au{};
+    };
+    addr.sa_family = address.getSockaddr()->sa_family;
+    address.copyFromNative(&addr, address.sockaddrLength());
+    fd.bind(&addr, address.sockaddrLength());
+#endif
     watcher = std::make_shared<FdEventWatcher>(loop);
     loop->getFdEventManager().add(watcher, fd);
     std::error_condition ec;
@@ -57,8 +72,8 @@ void Connector::connect()
     }
     else
     {
-        fd.close();
         loop->getFdEventManager().cancel(watcher, fd);
+        fd.close();
     }
 }
 
@@ -78,7 +93,7 @@ void Connector::connected()
 void Connector::retry()
 {
     state = State::Disconnected;
-    HLT_CORE_INFO("Connector::retry - Retry connecting to {} in {} milliseconds. ", address.toString(), retryDelay.count());
+    HLT_CORE_DEBUG("Connector::retry - Retry connecting to {} in {} milliseconds. ", address.toString(), retryDelay.count());
     loop->runAfter(retryDelay, [_this = shared_from_this()] { _this->startInLoop(); });
     retryDelay = ::min(retryDelay * 2, kMaxRetryDelayMs);
 }

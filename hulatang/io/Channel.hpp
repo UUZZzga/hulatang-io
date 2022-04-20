@@ -1,5 +1,5 @@
-#ifndef MYNET_CHANNEL_HPP_
-#define MYNET_CHANNEL_HPP_
+#ifndef HULATANG_IO_CHANNEL_HPP
+#define HULATANG_IO_CHANNEL_HPP
 
 #include "hulatang/base/File.hpp"
 #include <functional>
@@ -97,4 +97,4 @@ protected:
 };
 } // namespace hulatang::io
 
-#endif // MYNET_CHANNEL_HPP_
+#endif // HULATANG_IO_CHANNEL_HPP
