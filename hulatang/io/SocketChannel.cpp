@@ -84,6 +84,7 @@ void SocketChannel::sendInLoop(const base::Buf &buf)
 void SocketChannel::forceCloseInLoop()
 {
     loop->assertInLoopThread();
+    DLOG_TRACE;
     if (closed)
     {
         return;

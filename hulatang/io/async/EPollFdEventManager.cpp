@@ -123,11 +123,14 @@ void EPollFdEventManager::add(const FdEventWatcherPtr &watcher, const base::File
 
 void EPollFdEventManager::change(const base::FileDescriptor &fd)
 {
+    HLT_CORE_TRACE("EPollFdEventManager::change fd: {}", fd.getFd());
     epollCtl(epollFd, EPOLL_CTL_MOD, fd);
 }
 
 void EPollFdEventManager::cancel(const FdEventWatcherPtr &watcher, const base::FileDescriptor &fd)
 {
+    HLT_CORE_TRACE("EPollFdEventManager::cancel");
+    HLT_CORE_DEBUG("fd: {}", fd.getFd());
     FdEventManager::cancel(watcher, fd);
     // disableAll();
 }

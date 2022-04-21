@@ -46,7 +46,7 @@ void TCPServer::newConnection(base::FileDescriptor fd, FdEventWatcherPtr watcher
     conn->setConnectionCallback(connectionCallback);
     conn->setMessageCallback(messageCallback);
     conn->setCloseCallback([&](const auto &conn) { removeConnection(conn); });
-    auto key = conn->getPeerAddr().toString();
+    auto key = conn->getPeerAddr().getSockaddr();
     auto it = map.emplace(key, conn);
     auto fdPtr = std::make_shared<base::FileDescriptor>(std::move(fd));
     wloop->runInLoop([conn, fd{fdPtr}]() mutable { conn->connectEstablished(std::move(*fd)); });
@@ -56,9 +56,10 @@ void TCPServer::removeConnection(const TCPConnectionPtr &conn)
 {
     loop->runInLoop([this, conn] {
         loop->assertInLoopThread();
-        auto addr = conn->getPeerAddr().toString();
-        HLT_CORE_INFO("TcpServer::removeConnectionInLoop [{}] - connection", addr);
-        size_t n = map.erase(addr);
+        DLOG_TRACE;
+        const auto &addr = conn->getPeerAddr();
+        HLT_CORE_INFO("TcpServer::removeConnectionInLoop [{}] - connection", addr.toString());
+        size_t n = map.erase(addr.getSockaddr());
         assert(n == 1);
         EventLoop *ioLoop = conn->getLoop();
         ioLoop->queueInLoop([conn] { conn->connectDestroyed(); });

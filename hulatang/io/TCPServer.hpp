@@ -45,7 +45,7 @@ private:
     EventLoop *loop;
     InetAddress listenAddr;
     std::unique_ptr<EventLoopThreadPool> pool;
-    std::unordered_map<std::string, TCPConnectionPtr> map;
+    std::unordered_map<struct sockaddr *, TCPConnectionPtr> map;
     Acceptor acceptor;
 };
 } // namespace hulatang::io

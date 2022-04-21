@@ -1,5 +1,6 @@
 #include "hulatang/io/TCPConnection.hpp"
 #include "hulatang/base/Buf.hpp"
+#include "hulatang/base/Log.hpp"
 
 namespace hulatang::io {
 TCPConnection::TCPConnection(EventLoop *_loop, const FdEventWatcherPtr &watcher, InetAddress peerAddr)
@@ -42,7 +43,7 @@ void TCPConnection::connectEstablished(base::FileDescriptor &&fd)
     auto conn = shared_from_this();
     FdEventWatcherPtr watcher = watcherWPtr.lock();
     channel = std::make_shared<SocketChannel>(loop, std::move(fd), watcher, conn);
-    channel->setConnectionCallback([this](auto &) { connectDestroyed(); });
+    channel->setConnectionCallback([this](auto &) { closeCallback(shared_from_this()); });
     channel->setMessageCallback([this](const base::Buf &buf) { messageCallback(shared_from_this(), buf); });
 
     watcher->setReadHandler([_this = channel.get()](char *buf, size_t n) { _this->recvByteNum(buf, n); });
@@ -58,14 +59,15 @@ void TCPConnection::connectEstablished(base::FileDescriptor &&fd)
 void TCPConnection::connectDestroyed()
 {
     loop->assertInLoopThread();
+    HLT_CORE_TRACE("connectDestroyed::connectDestroyed");
+
     if (state == kConnected)
     {
         setState(kDisconnected);
-        channel->disableAll();
+        // channel->disableAll();
 
         auto ptr = shared_from_this();
         connectionCallback(ptr);
-        closeCallback(ptr);
     }
 }
 } // namespace hulatang::io

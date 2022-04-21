@@ -115,6 +115,11 @@ void FileDescriptor::socket(sockaddr *addr, size_t len)
         setsockopt(sockfd, SOL_SOCKET, SO_NOSIGPIPE, &on, sizeof(on));
     }
 #endif
+    {
+        int val = fcntl(sockfd, F_GETFL);
+        val |= O_NONBLOCK | O_CLOEXEC;
+        fcntl(sockfd, F_SETFD, val);
+    }
     impl = std::make_unique<Impl>(Impl{nullptr});
     impl->fd = sockfd;
 }
@@ -203,8 +208,9 @@ void FileDescriptor::write(const Buf &buf, std::error_condition &condition) noex
 {
     assert(impl);
     assert((impl->event & FileDescriptor::Impl::WRITE) == 0);
-    impl->write = true;
-    impl->writeBuf = buf;
+    auto *implPtr = impl.get();
+    implPtr->write = true;
+    implPtr->writeBuf = buf;
 }
 
 void FileDescriptor::close() noexcept
