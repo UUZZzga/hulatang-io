@@ -18,6 +18,8 @@ public:
     explicit FdEventManager(EventLoop *loop);
     virtual ~FdEventManager() = default;
 
+    virtual void init() {}
+
     virtual void process(microseconds blockTime);
 
     virtual void add(const FdEventWatcherPtr &watcher, const base::FileDescriptor &fd);

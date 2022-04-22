@@ -28,6 +28,7 @@ local win32_sources = {
 local linux_sources = {
     "accept/PosixAcceptor.cpp",
     "async/EPollFdEventManager.cpp",
+    "async/LinuxFdEventManager.cpp",
 }
 
 target("hulatang_io")

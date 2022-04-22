@@ -88,6 +88,7 @@ void EventLoop::init()
     DLOG_TRACE;
     status.store(EnumEventLoopStatus::Initializing);
     fdEventManager = FdEventManager::create(this);
+    fdEventManager->init();
     tid = std::this_thread::get_id();
     initNotifyPipeWatcher();
     updateTime();

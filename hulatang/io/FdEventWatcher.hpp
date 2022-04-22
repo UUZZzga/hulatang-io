@@ -3,6 +3,7 @@
 
 #include "hulatang/base/Buf.hpp"
 #include "hulatang/io/EventWatcher.hpp"
+#include <memory>
 #include <system_error>
 
 namespace hulatang::io {

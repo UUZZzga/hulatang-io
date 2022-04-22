@@ -29,7 +29,7 @@ using base::FileErrorCode;
 using base::make_file_error_condition;
 
 EPollFdEventManager::EPollFdEventManager(EventLoop *loop)
-    : FdEventManager(loop)
+    : LinuxFdEventManager(loop)
 #ifdef HAVE_EPOLL_CREATE1
     , epollFd(epoll_create1(EPOLL_CLOEXEC))
 #else
@@ -86,7 +86,7 @@ void EPollFdEventManager::process(microseconds blockTime)
 void epollCtl(int epollFd, int op, const base::FileDescriptor &fd)
 {
     auto *impl = const_cast<base::FileDescriptor::Impl *>(fd.getImpl());
-    uint32_t events = 0;
+    uint32_t events = EPOLLERR;
     if (impl->accept)
     {
         events |= EPOLLIN;

@@ -50,7 +50,11 @@ FileDescriptor::FileDescriptor(socket::fd_t fd)
     impl->fd = fd;
 }
 
-FileDescriptor::~FileDescriptor() noexcept = default;
+FileDescriptor::~FileDescriptor() noexcept{
+    if (impl) {
+        close();
+    }
+}
 
 FileDescriptor::FileDescriptor(FileDescriptor &&other) noexcept
     : impl(move(other.impl))
@@ -69,6 +73,14 @@ void FileDescriptor::open(std::string_view path, OFlag oflag, std::error_conditi
     if (fd < 0)
     {
         int err = errno;
+    }
+    if ((oflag & READ) != 0)
+    {
+        impl->read = true;
+    }
+    if ((oflag & WRITE) != 0)
+    {
+        impl->write = true;
     }
 }
 
@@ -93,6 +105,14 @@ void FileDescriptor::create(std::string_view path, OFlag oflag, std::error_condi
     }
     impl = std::make_unique<Impl>(Impl{nullptr});
     impl->fd = fd;
+    if ((oflag & READ) != 0)
+    {
+        impl->read = true;
+    }
+    if ((oflag & WRITE) != 0)
+    {
+        impl->write = true;
+    }
 }
 
 int64_t FileDescriptor::lseek(int64_t offset, int whence, std::error_condition &condition)
