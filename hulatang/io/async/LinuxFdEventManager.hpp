@@ -5,6 +5,7 @@
 
 #include "hulatang/io/FdEventWatcher.hpp"
 #include "hulatang/io/FdEventManager.hpp"
+#include <atomic>
 #include <vector>
 
 namespace hulatang::io {
@@ -18,11 +19,21 @@ public:
 
     void wakeup() override;
 
-private:
-    void processEvent(int numEvents);
+protected:
+    void startProcess()
+    {
+        processing = true;
+    }
 
+    void endProcess()
+    {
+        processing = false;
+    }
+
+private:
     base::FileDescriptor eventFd;
     uint64_t eventBuf;
+    std::atomic<bool> processing;
 };
 } // namespace hulatang::io
 

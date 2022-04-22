@@ -16,6 +16,7 @@ namespace hulatang::io {
 LinuxFdEventManager::LinuxFdEventManager(EventLoop *loop)
     : FdEventManager(loop)
     , eventFd(eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC))
+    , processing(false)
 {}
 
 LinuxFdEventManager::~LinuxFdEventManager()
@@ -37,6 +38,9 @@ void LinuxFdEventManager::init()
 
 void LinuxFdEventManager::wakeup()
 {
-    eventfd_write(eventFd.getFd(), 0);
+    if (processing)
+    {
+        eventfd_write(eventFd.getFd(), 0);
+    }
 }
 } // namespace hulatang::io

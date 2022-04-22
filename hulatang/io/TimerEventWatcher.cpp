@@ -24,7 +24,7 @@ TimerEventWatcherPtr TimerEventWatcher::create(EventLoop *loop, microseconds tim
 {
     auto watcher = std::make_shared<TimerEventWatcher>(loop, timeout);
     watcher->setHandler(std::move(f));
-    loop->getTimerEventManager().add(watcher);
+    loop->runInLoop([loop, watcher] { loop->getTimerEventManager().add(watcher); });
     return watcher;
 }
 
@@ -32,7 +32,7 @@ TimerEventWatcherPtr TimerEventWatcher::create(EventLoop *loop, microseconds tim
 {
     auto watcher = std::make_shared<TimerEventWatcher>(loop, timeout);
     watcher->setHandler(f);
-    loop->getTimerEventManager().add(watcher);
+    loop->runInLoop([loop, watcher] { loop->getTimerEventManager().add(watcher); });
     return watcher;
 }
 
@@ -47,7 +47,7 @@ void TimerEventWatcher::doCancel()
     DLOG_TRACE;
     if (attached)
     {
-        loop->getTimerEventManager().cancel(shared_from_this());
+        loop->runInLoop([loop{this->loop}, watcher{shared_from_this()}] { loop->getTimerEventManager().cancel(watcher); });
         attached = false;
     }
 }
@@ -56,7 +56,7 @@ TimerEventWatcherPtr RepeatTimerEventWatcher::create(EventLoop *loop, microsecon
 {
     auto watcher = std::make_shared<RepeatTimerEventWatcher>(loop, interval, repeat);
     watcher->setHandler(std::move(f));
-    loop->getTimerEventManager().add(watcher);
+    loop->runInLoop([loop, watcher] { loop->getTimerEventManager().add(watcher); });
     return watcher;
 }
 
@@ -65,7 +65,7 @@ TimerEventWatcherPtr RepeatTimerEventWatcher::create(
 {
     auto watcher = std::make_shared<RepeatTimerEventWatcher>(loop, interval, repeat);
     watcher->setHandler(f);
-    loop->getTimerEventManager().add(watcher);
+    loop->runInLoop([loop, watcher] { loop->getTimerEventManager().add(watcher); });
     return watcher;
 }
 
@@ -77,6 +77,7 @@ RepeatTimerEventWatcher::RepeatTimerEventWatcher(EventLoop *loop, microseconds _
 
 void RepeatTimerEventWatcher::handle()
 {
+    loop->assertInLoopThread();
     DLOG_TRACE;
     handler();
     if (repeat == 0)

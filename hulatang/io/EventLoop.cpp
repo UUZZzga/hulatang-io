@@ -51,12 +51,19 @@ void EventLoop::stop()
 {
     DLOG_TRACE;
     status.store(EnumEventLoopStatus::Stopping);
-    wakeup();
+    if (!isInLoopThread())
+    {
+        wakeup();
+    }
 }
 
 void EventLoop::queueInLoop(const std::function<void()> &f)
 {
     cycleEventManager.createEvent(f);
+    if (!isInLoopThread())
+    {
+        wakeup();
+    }
 }
 
 InvokeTimerPtr EventLoop::runAfter(microseconds time, const std::function<void()> &f)
@@ -163,7 +170,8 @@ void EventLoop::updateTime()
     currentTime = duration_cast<microseconds>(system_clock::now().time_since_epoch());
 }
 
-EventLoop *EventLoop::getEventLoopOfCurrentThread() {
+EventLoop *EventLoop::getEventLoopOfCurrentThread()
+{
     return currentEventLoop;
 }
 

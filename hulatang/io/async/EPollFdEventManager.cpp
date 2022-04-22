@@ -55,10 +55,12 @@ EPollFdEventManager::~EPollFdEventManager()
 
 void EPollFdEventManager::process(microseconds blockTime)
 {
+    startProcess();
     using std::chrono::duration_cast;
     using std::chrono::milliseconds;
     milliseconds timeout = duration_cast<milliseconds>(blockTime);
     int numEvents = ::epoll_wait(epollFd, &*events.begin(), static_cast<int>(events.size()), static_cast<int>(timeout.count()));
+    endProcess();
     if (numEvents > 0)
     {
         HLT_CORE_TRACE("{} events happened", numEvents);

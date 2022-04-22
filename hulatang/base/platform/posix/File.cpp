@@ -45,13 +45,13 @@ namespace hulatang::base {
 FileDescriptor::FileDescriptor() = default;
 
 FileDescriptor::FileDescriptor(socket::fd_t fd)
-{
-    impl.reset(new Impl{nullptr});
-    impl->fd = fd;
-}
+    : impl(std::make_unique<Impl>(Impl{.fd = fd}))
+{}
 
-FileDescriptor::~FileDescriptor() noexcept{
-    if (impl) {
+FileDescriptor::~FileDescriptor() noexcept
+{
+    if (impl)
+    {
         close();
     }
 }
@@ -194,7 +194,7 @@ void FileDescriptor::accept(FileDescriptor &fd, std::error_condition &condition)
     assert(impl);
     assert(!fd.impl);
     condition = make_file_error_condition(FileErrorCode::CONNECTING);
-    fd.impl = std::make_unique<Impl>(Impl{nullptr});
+    // fd.impl = std::make_unique<Impl>(Impl{nullptr});
 }
 
 void FileDescriptor::connect(sockaddr *addr, size_t len, std::error_condition &condition) noexcept
