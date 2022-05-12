@@ -1,5 +1,5 @@
-#ifndef HULATANG_IO_SOCKETCHANNEL_HPP
-#define HULATANG_IO_SOCKETCHANNEL_HPP
+#ifndef HULATANG_IO_ProactorChannel_HPP
+#define HULATANG_IO_ProactorChannel_HPP
 
 #include "hulatang/base/Buf.hpp"
 #include "hulatang/base/Buffer.hpp"
@@ -16,15 +16,15 @@
 
 namespace hulatang::io {
 class TCPConnection;
-class SocketChannel : public std::enable_shared_from_this<SocketChannel>, public Channel
+class ProactorChannel : public std::enable_shared_from_this<ProactorChannel>, public Channel
 {
 public:
     typedef std::function<void(const base::Buf &)> MessageCallback;
 
 public:
-    SocketChannel(EventLoop *loop, base::FileDescriptor &&fd, FdEventWatcherPtr _watcher, std::shared_ptr<void> _tie);
+    ProactorChannel(EventLoop *loop, base::FileDescriptor &&fd, FdEventWatcherPtr _watcher, std::shared_ptr<void> _tie);
 
-    ~SocketChannel() override;
+    ~ProactorChannel() override;
 
     void close() override;
 
@@ -61,8 +61,6 @@ public:
     void postWrite();
 
 private:
-    void sendInLoop(const base::Buf &buf);
-
     void forceCloseInLoop();
 
     void runSend(const base::Buf &buf);
@@ -72,28 +70,27 @@ private:
     MessageCallback messageCallback;
     std::weak_ptr<FdEventWatcher> watcher;
     std::shared_ptr<void> tie;
-    base::Buffer sendBuffer;
     size_t triggerByteNum;
     std::mutex writeLock;
     size_t finishedSendByteNum;
     bool closed;
 };
 
-inline void SocketChannel::setConnectionCallback(const DefaultCallback &connectionCallback)
+inline void ProactorChannel::setConnectionCallback(const DefaultCallback &connectionCallback)
 {
     this->connectionCallback = connectionCallback;
 }
 
-inline void SocketChannel::setNextTriggerByteNum(size_t triggerByteNum)
+inline void ProactorChannel::setNextTriggerByteNum(size_t triggerByteNum)
 {
     this->triggerByteNum = triggerByteNum;
 }
 
-inline void SocketChannel::setMessageCallback(const MessageCallback &messageCallback)
+inline void ProactorChannel::setMessageCallback(const MessageCallback &messageCallback)
 {
     this->messageCallback = messageCallback;
 }
 
 } // namespace hulatang::io
 
-#endif // HULATANG_IO_SOCKETCHANNEL_HPP
+#endif // HULATANG_IO_ProactorChannel_HPP

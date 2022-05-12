@@ -6,6 +6,7 @@
 #include <cassert>
 #include <bit>
 #include <algorithm>
+#include <cstring>
 #include <string_view>
 #include <vector>
 
@@ -102,7 +103,17 @@ public:
         return begin() + readerIndex_;
     }
 
+    [[nodiscard]] char *peek() noexcept
+    {
+        return begin() + readerIndex_;
+    }
+
     [[nodiscard]] const char *data() const
+    {
+        return peek();
+    }
+
+    [[nodiscard]] char *data()
     {
         return peek();
     }
@@ -214,7 +225,8 @@ public:
     void append(const char * /*restrict*/ data, size_t len)
     {
         ensureWritableBytes(len);
-        std::copy(data, data + len, beginWrite());
+        // std::copy(data, data + len, beginWrite());
+        memcpy(beginWrite(), data, len);
         hasWritten(len);
     }
 

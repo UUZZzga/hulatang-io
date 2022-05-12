@@ -12,7 +12,6 @@ local sources = {
     "IdleEventWatcher.cpp",
     "InetAddress.cpp",
     "InvokeTimer.cpp",
-    "SocketChannel.cpp",
     "TCPClient.cpp",
     "TCPConnection.cpp",
     "TCPServer.cpp",
@@ -21,14 +20,26 @@ local sources = {
 }
 
 local win32_sources = {
+    "Proactor.cpp",
+
+    "accept/Win32Acceptor.cpp",
     "async/IOCPFdEventManager.cpp",
-    "async/Win32Acceptor.cpp"
+
+    "proactor/WindowsOver.cpp",
+    "proactor/WSAcceptProactor.cpp",
+    "proactor/WSConnectProactor.cpp",
+    "proactor/WSProactor.cpp",
 }
 
 local linux_sources = {
+    "Reactor.cpp",
+
     "accept/PosixAcceptor.cpp",
     "async/EPollFdEventManager.cpp",
     "async/LinuxFdEventManager.cpp",
+    "reactor/UnixAcceptReactor.cpp",
+    "reactor/UnixConnectReactor.cpp",
+    "reactor/UnixReactor.cpp",
 }
 
 target("hulatang_io")

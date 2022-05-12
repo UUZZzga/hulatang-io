@@ -1,5 +1,7 @@
 #include "hulatang/io/TCPClient.hpp"
 
+#include "hulatang/base/Log.hpp"
+#include "hulatang/io/SocketModelFactory.hpp"
 #include "hulatang/io/TCPConnection.hpp"
 #include <memory>
 
@@ -10,7 +12,8 @@ TCPClient::TCPClient(EventLoop *_loop, InetAddress _address)
     , address(std::move(_address))
     , connector(std::make_shared<Connector>(_loop, address))
 {
-    connector->setNewConnectionCallback([&](base::FileDescriptor &&fd, FdEventWatcherPtr watcher) { newConnection(std::move(fd), watcher); });
+    connector->setNewConnectionCallback(
+        [this](std::unique_ptr<Channel> channel) { newConnection(std::move(channel)); });
 }
 
 void TCPClient::connect()
@@ -25,13 +28,13 @@ void TCPClient::stop()
     connector->stop();
 }
 
-void TCPClient::newConnection(base::FileDescriptor &&fd, FdEventWatcherPtr watcher)
+void TCPClient::newConnection(std::unique_ptr<Channel> channel)
 {
     loop->assertInLoopThread();
-    TCPConnectionPtr conn(
-        std::make_shared<TCPConnection>(loop, watcher, InetAddress::copyFromNative(address.getSockaddr(), address.sockaddrLength())
-            // , "", fd, localAddr, peerAddr
-            ));
+    TCPConnectionPtr conn(std::make_shared<TCPConnection>(
+        loop, std::move(channel), InetAddress::copyFromNative(address.getSockaddr(), address.sockaddrLength())
+        // , "", fd, localAddr, peerAddr
+        ));
     conn->setConnectionCallback(connectionCallback);
     conn->setMessageCallback(messageCallback);
     conn->setCloseCallback([&](const auto &conn) { removeConnection(conn); });
@@ -39,7 +42,7 @@ void TCPClient::newConnection(base::FileDescriptor &&fd, FdEventWatcherPtr watch
         std::lock_guard lock(mutex);
         connection = conn;
     }
-    conn->connectEstablished(std::move(fd));
+    conn->connectEstablished();
 }
 
 void TCPClient::removeConnection(const TCPConnectionPtr &conn)

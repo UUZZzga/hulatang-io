@@ -11,18 +11,18 @@ struct FileDescriptor::Impl
         READ,
         WRITE
     };
-    void *watcher{};
-    Buf readBuf;
-    Buf writeBuf;
-    int event{};
+    // void *watcher{};
+    // Buf readBuf;
+    // Buf writeBuf;
+    // int event{};
     int fd{};
-    bool accept : 1{};
-    bool connection : 1{};
-    bool read : 1{};
-    bool write : 1{};
-    bool recvfrom : 1{};
-    bool sendto : 1{};
-    bool close : 1{};
+    // bool accept : 1{};
+    // bool connection : 1{};
+    // bool read : 1{};
+    // bool write : 1{};
+    // bool recvfrom : 1{};
+    // bool sendto : 1{};
+    // bool close : 1{};
 };
 } // namespace hulatang::base
 

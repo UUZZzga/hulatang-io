@@ -5,11 +5,12 @@
 #include "hulatang/base/extend/Cast.hpp"
 
 #include "hulatang/base/File.hpp"
+#include "hulatang/io/Channel.hpp"
 #include "hulatang/io/EventLoop.hpp"
-#include "hulatang/io/FdEventWatcher.hpp"
-#include "hulatang/io/SocketChannel.hpp"
 #include <chrono>
+#include <memory>
 #include <sys/eventfd.h>
+#include <sys/poll.h>
 #include <unistd.h>
 
 namespace hulatang::io {
@@ -21,19 +22,21 @@ LinuxFdEventManager::LinuxFdEventManager(EventLoop *loop)
 
 LinuxFdEventManager::~LinuxFdEventManager()
 {
-    eventFd.close();
+    channel->getFd().close();
 }
 
 void LinuxFdEventManager::init()
 {
-    FdEventWatcherPtr watcher = std::make_shared<FdEventWatcher>(loop);
-    watcher->setReadHandler([](char *buf, size_t size) {
-        assert(size == sizeof(uint64_t));
-        assert(*reinterpret_cast<uint64_t *>(buf) == 1);
+    channel = std::make_unique<Channel>(loop, std::move(eventFd));
+    channel->setHandlerCallback([](Channel *channel) {
+        if ((channel->getREvent() & POLLIN) != 0)
+        {
+            eventfd_t event = 0;
+            eventfd_read(channel->getFd().getFd(), &event);
+        }
     });
-    std::error_condition condition;
-    eventFd.read({reinterpret_cast<char *>(&eventBuf), sizeof(eventBuf)}, condition);
-    add(watcher, eventFd);
+    add(channel.get());
+    channel->enableReading();
 }
 
 void LinuxFdEventManager::wakeup()

@@ -1,31 +1,42 @@
 #include "hulatang/io/TCPConnection.hpp"
-#include "hulatang/base/Buf.hpp"
+
 #include "hulatang/base/Log.hpp"
+#include "hulatang/io/EventLoop.hpp"
+#include "hulatang/io/SocketModelFactory.hpp"
+#include <functional>
+#include <memory>
+#include <utility>
 
 namespace hulatang::io {
-TCPConnection::TCPConnection(EventLoop *_loop, const FdEventWatcherPtr &watcher, InetAddress peerAddr)
+TCPConnection::TCPConnection(EventLoop *_loop, std::unique_ptr<Channel> channel, InetAddress peerAddr)
     : loop(_loop)
-    , watcherWPtr(watcher)
+    , channel(std::move(channel))
     , peerAddr(std::move(peerAddr))
     , state(kConnecting)
 {}
 
+TCPConnection::~TCPConnection()
+{
+    HLT_CORE_TRACE("TCPConnection::~TCPConnection()");
+}
+
 void TCPConnection::send(const base::Buf &buf)
 {
-    int32_t expected = 0;
-    int32_t desired = 1;
-    while (!sending.compare_exchange_strong(expected, desired))
+    auto fn = [this, buf] {
+        sendBuffer.append(buf.buf, buf.len);
+        if (!channel->isWriting())
+        {
+            channel->enableWriting();
+        }
+    };
+    if (loop->isInLoopThread())
     {
-        expected = 0;
+        fn();
     }
-    channel->send(buf);
-    // std::error_condition condition;
-    // channel->getFd().write(buf, condition);
-    // if (condition)
-    // {
-    //     HLT_CORE_WARN("condition code{}, message{}", condition.value(), condition.message());
-    // }
-    sending.store(0);
+    else
+    {
+        loop->queueInLoop(fn);
+    }
 }
 
 void TCPConnection::shutdown()
@@ -33,26 +44,32 @@ void TCPConnection::shutdown()
     loop->queueInLoop([_this = shared_from_this()] { _this->closeCallback(_this); });
 }
 
-void TCPConnection::connectEstablished(base::FileDescriptor &&fd)
+void TCPConnection::forceClose() {}
+
+void TCPConnection::connectEstablished()
 {
+    assert(channel);
     loop->assertInLoopThread();
     assert(state == kConnecting);
     setState(kConnected);
 
-    assert(!watcherWPtr.expired());
     auto conn = shared_from_this();
-    FdEventWatcherPtr watcher = watcherWPtr.lock();
-    channel = std::make_shared<SocketChannel>(loop, std::move(fd), watcher, conn);
-    channel->setConnectionCallback([this](auto &) { closeCallback(shared_from_this()); });
-    channel->setMessageCallback([this](const base::Buf &buf) { messageCallback(shared_from_this(), buf); });
 
-    watcher->setReadHandler([_this = channel.get()](char *buf, size_t n) { _this->recvByteNum(buf, n); });
-    watcher->setWriteHandler([_this = channel.get()](char *buf, size_t n) { _this->sendByteNum(buf, n); });
-    watcher->setCloseHandler([_this = channel]() mutable {
-        _this->close();
-        _this.reset();
+    channel->setTie(conn);
+
+    channel->setHandlerCallback([this](auto &&PH1) { model->handleEvent(std::forward<decltype(PH1)>(PH1)); });
+    channel->setCloseCallback([this]() {
+        closeCallback(shared_from_this());
     });
+    channel->setErrorCallback(
+        [](const std::error_condition &cond) { HLT_CORE_ERROR("error code: {}, message: {}", cond.value(), cond.message()); });
+
+    model = SocketModelFactory::create(
+        channel.get(), &recvBuffer, &sendBuffer, [this]() { messageCallback(shared_from_this(), &recvBuffer); },
+        std::function<void(const char *, size_t)>());
+
     channel->enableReading();
+
     connectionCallback(conn);
 }
 
@@ -64,10 +81,12 @@ void TCPConnection::connectDestroyed()
     if (state == kConnected)
     {
         setState(kDisconnected);
-        // channel->disableAll();
+        channel->disableAll();
 
-        auto ptr = shared_from_this();
-        connectionCallback(ptr);
+        auto conn = shared_from_this();
+        connectionCallback(conn);
     }
+    channel->cancel();
+    channel->clearTie();
 }
 } // namespace hulatang::io

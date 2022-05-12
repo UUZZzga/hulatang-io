@@ -1,8 +1,7 @@
 #ifndef HULATANG_IO_FDEVENTMANAGER_HPP
 #define HULATANG_IO_FDEVENTMANAGER_HPP
 
-#include "hulatang/base/File.hpp"
-#include "hulatang/io/FdEventWatcher.hpp"
+#include "hulatang/io/Channel.hpp"
 #include <chrono>
 #include <memory>
 #include <vector>
@@ -22,19 +21,17 @@ public:
 
     virtual void process(microseconds blockTime);
 
-    virtual void add(const FdEventWatcherPtr &watcher, const base::FileDescriptor &fd);
-    virtual void change(const base::FileDescriptor &fd);
-    virtual void cancel(const FdEventWatcherPtr &watcher, const base::FileDescriptor &fd);
+    virtual void add(Channel *channel);
+    virtual void update(Channel *channel);
+    virtual void cancel(Channel *channel);
 
     static std::unique_ptr<FdEventManager> create(EventLoop *loop);
 
     virtual void wakeup();
 
 protected:
-    [[nodiscard]] FdEventWatcherPtr getWatcher(const base::FileDescriptor &fd) const;
-
     EventLoop *loop;
-    std::vector<FdEventWatcherPtr> watchers;
+    std::vector<Channel *> channels;
 };
 } // namespace hulatang::io
 

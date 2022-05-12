@@ -1,4 +1,4 @@
-add_rules("mode.debug", "mode.release", "mode.releasedbg")
+add_rules("mode.debug", "mode.release", "mode.releasedbg", "mode.profile", "mode.check")
 
 set_languages("c++20")
 
@@ -13,6 +13,9 @@ option_end()
 add_requires("gtest 1.11.0")
 add_requires("spdlog 1.9.2", {system = false, configs = {fmt_external = true}})
 add_requires("concurrentqueue")
+
+-- SSL/TLS
+-- add_requires("libressl 3.4.2")
 
 -- 堆栈跟踪
 add_requires("backward-cpp v1.6")
@@ -62,8 +65,11 @@ elseif is_mode("release") then
     if is_plat("windows") then
         set_runtimes("MT")
     end
+    -- add_defines("DISABLE_LOGGING")
 elseif is_mode("releasedbg") then
-    add_defines("DISABLE_LOGGING")
+    -- 在非windows下会尝试将代码和调试符号分成两个文件，对部分代码工具支持不佳
+    -- set_strip("none") 关闭
+    set_strip("none")
 end
 
 -- 启用协程支持
@@ -114,5 +120,6 @@ includes("hulatang/base")
 includes("hulatang/file")
 includes("hulatang/http")
 includes("hulatang/io")
+includes("hulatang/ssl")
 
 includes("examples")

@@ -19,9 +19,9 @@ public:
 
     void process(microseconds blockTime) override;
 
-    void add(const FdEventWatcherPtr &watcher, const base::FileDescriptor &fd) override;
-    void change(const base::FileDescriptor &fd) override;
-    void cancel(const FdEventWatcherPtr &watcher, const base::FileDescriptor &fd) override;
+    void add(Channel *channel) override;
+    void update(Channel *channel) override;
+    void cancel(Channel *channel) override;
 
     void wakeup() override;
 

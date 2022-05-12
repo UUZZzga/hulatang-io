@@ -3,9 +3,9 @@
 
 #include "Config.h"
 
-#include "hulatang/io/FdEventWatcher.hpp"
 #include "hulatang/io/FdEventManager.hpp"
 #include <atomic>
+#include <memory>
 #include <vector>
 
 namespace hulatang::io {
@@ -32,7 +32,7 @@ protected:
 
 private:
     base::FileDescriptor eventFd;
-    uint64_t eventBuf;
+    std::unique_ptr<Channel> channel;
     std::atomic<bool> processing;
 };
 } // namespace hulatang::io

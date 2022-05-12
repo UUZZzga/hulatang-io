@@ -15,7 +15,7 @@ using microseconds = hulatang::io::EventLoop::microseconds;
 using std::chrono::operator""ms;
 using std::chrono::operator""us;
 
-constexpr microseconds MaximumBlockingTime = 100ms;
+constexpr microseconds MaximumBlockingTime = 10000ms;
 
 namespace {
 thread_local hulatang::io::EventLoop *currentEventLoop = nullptr;
@@ -27,8 +27,16 @@ EventLoop::EventLoop()
     : currentTime(0)
     , timerEventManager(this)
 {
+    assert(currentEventLoop == nullptr);
     NetInit::init();
     init();
+    currentEventLoop = this;
+}
+
+EventLoop::~EventLoop()
+{
+    assert(currentEventLoop != nullptr);
+    currentEventLoop = nullptr;
 }
 
 void EventLoop::run()

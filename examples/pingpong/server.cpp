@@ -1,3 +1,4 @@
+#include "hulatang/base/Buffer.hpp"
 #include "hulatang/base/Log.hpp"
 #include "hulatang/base/String.hpp"
 #include "hulatang/io/TCPServer.hpp"
@@ -17,9 +18,10 @@ void onConnection(const TCPConnectionPtr &conn)
     // }
 }
 
-void onMessage(const TCPConnectionPtr &conn, const Buf &buf)
+void onMessage(const TCPConnectionPtr &conn, Buffer *buf)
 {
-    conn->send(buf);
+    conn->send({const_cast<char *>(buf->data()), buf->size()});
+    buf->retrieveAll();
 }
 
 int main(int argc, char *argv[])

@@ -25,6 +25,7 @@ public:
 
 public:
     EventLoop();
+    ~EventLoop();
 
     void run();
 

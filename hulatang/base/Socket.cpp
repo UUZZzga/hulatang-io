@@ -34,8 +34,9 @@ fd_t accept(fd_t listenFd, sockaddr_u *addr, size_t *len)
         case EMFILE: // 已达到每个进程对打开的文件描述符数量的限制
         case ENFILE: // 已达到系统范围内打开文件总数的限制
         {
+            errno = err;
+            return -1;
         }
-        return -err;
         case ENOBUFS:
         case ENOMEM: {
             // 没有足够的可用内存

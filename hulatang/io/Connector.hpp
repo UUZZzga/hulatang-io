@@ -5,16 +5,17 @@
 #include "hulatang/io/Channel.hpp"
 #include "hulatang/io/EventLoop.hpp"
 #include "hulatang/io/InetAddress.hpp"
+#include "hulatang/io/Model.hpp"
+#include "hulatang/io/SocketModelFactory.hpp"
 
 #include <chrono>
 #include <memory>
-#include <string_view>
 
 namespace hulatang::io {
 class Connector : public std::enable_shared_from_this<Connector>
 {
 public:
-    using NewConnectionCallback = std::function<void(base::FileDescriptor &&, FdEventWatcherPtr)>;
+    using NewConnectionCallback = std::function<void(std::unique_ptr<Channel>)>;
 
     Connector(EventLoop *_loop, InetAddress &_address);
     ~Connector();
@@ -36,7 +37,7 @@ private:
     void retry();
 
     void startInLoop();
-    void handleError(std::error_condition &ec);
+    void handleError(const std::error_condition &ec);
 
 private:
     enum class State
@@ -50,8 +51,8 @@ private:
     std::chrono::milliseconds retryDelay;
     base::FileDescriptor fd;
     std::unique_ptr<Channel> channel;
+    std::unique_ptr<Model> model;
     State state;
-    FdEventWatcherPtr watcher;
     NewConnectionCallback newConnectionCallback;
 };
 } // namespace hulatang::io

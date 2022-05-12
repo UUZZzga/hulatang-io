@@ -46,7 +46,9 @@ FileDescriptor::FileDescriptor() = default;
 
 FileDescriptor::FileDescriptor(socket::fd_t fd)
     : impl(std::make_unique<Impl>(Impl{.fd = fd}))
-{}
+{
+    assert(fd >= 0);
+}
 
 FileDescriptor::~FileDescriptor() noexcept
 {
@@ -74,14 +76,14 @@ void FileDescriptor::open(std::string_view path, OFlag oflag, std::error_conditi
     {
         int err = errno;
     }
-    if ((oflag & READ) != 0)
-    {
-        impl->read = true;
-    }
-    if ((oflag & WRITE) != 0)
-    {
-        impl->write = true;
-    }
+    // if ((oflag & READ) != 0)
+    // {
+    //     impl->read = true;
+    // }
+    // if ((oflag & WRITE) != 0)
+    // {
+    //     impl->write = true;
+    // }
 }
 
 void FileDescriptor::create(std::string_view path, OFlag oflag, std::error_condition &condition)
@@ -103,16 +105,16 @@ void FileDescriptor::create(std::string_view path, OFlag oflag, std::error_condi
         break;
         }
     }
-    impl = std::make_unique<Impl>(Impl{nullptr});
+    impl = std::make_unique<Impl>(Impl{});
     impl->fd = fd;
-    if ((oflag & READ) != 0)
-    {
-        impl->read = true;
-    }
-    if ((oflag & WRITE) != 0)
-    {
-        impl->write = true;
-    }
+    // if ((oflag & READ) != 0)
+    // {
+    //     impl->read = true;
+    // }
+    // if ((oflag & WRITE) != 0)
+    // {
+    //     impl->write = true;
+    // }
 }
 
 int64_t FileDescriptor::lseek(int64_t offset, int whence, std::error_condition &condition)
@@ -140,7 +142,7 @@ void FileDescriptor::socket(sockaddr *addr, size_t len)
         val |= O_NONBLOCK | O_CLOEXEC;
         fcntl(sockfd, F_SETFD, val);
     }
-    impl = std::make_unique<Impl>(Impl{nullptr});
+    impl = std::make_unique<Impl>(Impl{});
     impl->fd = sockfd;
 }
 
@@ -186,7 +188,7 @@ void FileDescriptor::listen(std::error_condition &condition)
             break;
         }
     }
-    impl->accept = true;
+    // impl->accept = true;
 }
 
 void FileDescriptor::accept(FileDescriptor &fd, std::error_condition &condition)
@@ -219,18 +221,18 @@ void FileDescriptor::connect(sockaddr *addr, size_t len, std::error_condition &c
 void FileDescriptor::read(const Buf &buf, std::error_condition &condition) noexcept
 {
     assert(impl);
-    assert((impl->event & READ) == 0);
-    impl->read = true;
-    impl->readBuf = buf;
+    // assert((impl->event & READ) == 0);
+    // impl->read = true;
+    // impl->readBuf = buf;
 }
 
 void FileDescriptor::write(const Buf &buf, std::error_condition &condition) noexcept
 {
     assert(impl);
-    assert((impl->event & FileDescriptor::Impl::WRITE) == 0);
-    auto *implPtr = impl.get();
-    implPtr->write = true;
-    implPtr->writeBuf = buf;
+    // assert((impl->event & FileDescriptor::Impl::WRITE) == 0);
+    // auto *implPtr = impl.get();
+    // implPtr->write = true;
+    // implPtr->writeBuf = buf;
 }
 
 void FileDescriptor::close() noexcept

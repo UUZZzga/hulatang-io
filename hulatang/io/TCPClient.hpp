@@ -2,6 +2,8 @@
 #define HULATANG_IO_TCPCLIENT_HPP
 
 #include "hulatang/base/Buf.hpp"
+#include "hulatang/base/Buffer.hpp"
+#include "hulatang/io/Channel.hpp"
 #include "hulatang/io/Connector.hpp"
 #include "hulatang/io/InetAddress.hpp"
 #include "hulatang/io/TCPConnection.hpp"
@@ -12,7 +14,7 @@ class TCPClient
 {
 public:
     using ConnectionCallback = std::function<void(const TCPConnectionPtr &)>;
-    using MessageCallback = std::function<void(const TCPConnectionPtr &, const base::Buf &)>;
+    using MessageCallback = std::function<void(const TCPConnectionPtr &, base::Buffer *)>;
 
     TCPClient(EventLoop *_loop, InetAddress _address);
 
@@ -31,7 +33,7 @@ public:
     }
 
 private:
-    void newConnection(base::FileDescriptor &&fd, FdEventWatcherPtr watcher);
+    void newConnection(std::unique_ptr<Channel> channel);
     void removeConnection(const TCPConnectionPtr &conn);
 
 private:

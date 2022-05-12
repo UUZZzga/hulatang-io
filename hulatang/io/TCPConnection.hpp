@@ -1,9 +1,11 @@
 #ifndef HULATANG_IO_TCPCONNECTION_HPP
 #define HULATANG_IO_TCPCONNECTION_HPP
 
-#include "hulatang/base/Buf.hpp"
+#include "hulatang/base/Buffer.hpp"
 #include "hulatang/io/InetAddress.hpp"
-#include "hulatang/io/SocketChannel.hpp"
+#include "hulatang/io/Channel.hpp"
+#include "hulatang/io/Model.hpp"
+#include "hulatang/io/SocketModelFactory.hpp"
 
 #include <any>
 #include <array>
@@ -16,9 +18,8 @@ using TCPConnectionPtr = std::shared_ptr<TCPConnection>;
 class TCPConnection : public std::enable_shared_from_this<TCPConnection>
 {
 public:
-    using SocketChannelPtr = std::shared_ptr<SocketChannel>;
     using ConnectionCallback = std::function<void(const TCPConnectionPtr &)>;
-    using MessageCallback = std::function<void(const TCPConnectionPtr &, const base::Buf &)>;
+    using MessageCallback = std::function<void(const TCPConnectionPtr &, base::Buffer *)>;
     using CloseCallback = std::function<void(const TCPConnectionPtr &)>;
     using Context = std::any;
     // msvc: sizeof(Context) == 64
@@ -32,7 +33,8 @@ public:
         kDisconnected,
     };
 
-    TCPConnection(EventLoop *_loop, const FdEventWatcherPtr &watcher, InetAddress peerAddr);
+    TCPConnection(EventLoop *_loop, std::unique_ptr<Channel> channel, InetAddress peerAddr);
+    ~TCPConnection();
 
     void send(const base::Buf &buf);
 
@@ -43,7 +45,7 @@ public:
     void stopRead();
 
     // called when TcpServer accepts a new connection
-    void connectEstablished(base::FileDescriptor &&fd); // should be called only once
+    void connectEstablished(); // should be called only once
     // called when TcpServer has removed me from its map
     void connectDestroyed(); // should be called only once
 
@@ -97,12 +99,17 @@ public:
         contexts.at(index) = std::move(value);
     }
 
-    const InetAddress& getPeerAddr() const { return peerAddr; }
+    const InetAddress &getPeerAddr() const
+    {
+        return peerAddr;
+    }
 
 private:
     EventLoop *loop;
-    SocketChannelPtr channel;
-    FdEventWatcherPtr::weak_type watcherWPtr;
+    std::unique_ptr<Channel> channel;
+    std::unique_ptr<Model> model;
+    base::Buffer sendBuffer;
+    base::Buffer recvBuffer;
     InetAddress peerAddr;
     std::atomic_int32_t sending;
     std::atomic<StateE> state;

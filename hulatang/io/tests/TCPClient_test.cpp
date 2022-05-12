@@ -13,12 +13,13 @@ int main(int _argc, const char **_argv)
 {
     Log::init();
     EventLoop loop;
-    TCPClient client(&loop, InetAddress::fromHostnameAndService("localhost", "http"));
+    TCPClient client(&loop, InetAddress::fromHostnameAndPort("localhost", 8080));
 
     client.setConnectionCallback([](const auto &conn) { HLT_INFO("ConnectionCallback"); });
-    client.setMessageCallback([](const auto &conn, const auto &buf) -> void {
-        HLT_INFO("{}", std::string_view(buf.buf, buf.len));
-        conn->send(buf);
+    client.setMessageCallback([](const auto &conn, auto *buf) -> void {
+        std::string sbuf{buf->retrieveAllAsString()};
+        HLT_INFO("{}", sbuf);
+        conn->getLoop()->runInLoop([&] { conn->send({sbuf.data(), sbuf.size()}); });
         conn->getLoop()->stop();
     });
 

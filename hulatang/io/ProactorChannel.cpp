@@ -1,10 +1,10 @@
-#include "hulatang/io/SocketChannel.hpp"
+#include "hulatang/io/ProactorChannel.hpp"
 
 #include "hulatang/base/Buf.hpp"
 
 namespace hulatang::io {
 
-SocketChannel::SocketChannel(EventLoop *loop, base::FileDescriptor &&fd, FdEventWatcherPtr _watcher, std::shared_ptr<void> _tie)
+ProactorChannel::ProactorChannel(EventLoop *loop, base::FileDescriptor &&fd, FdEventWatcherPtr _watcher, std::shared_ptr<void> _tie)
     : Channel(loop, std::move(fd))
     , watcher(_watcher)
     , tie(_tie)
@@ -13,12 +13,12 @@ SocketChannel::SocketChannel(EventLoop *loop, base::FileDescriptor &&fd, FdEvent
     , closed(false)
 {}
 
-SocketChannel::~SocketChannel()
+ProactorChannel::~ProactorChannel()
 {
     forceCloseInLoop();
 }
 
-void SocketChannel::close()
+void ProactorChannel::close()
 {
     if (loop->isInLoopThread())
     {
@@ -30,13 +30,13 @@ void SocketChannel::close()
     }
 }
 
-void SocketChannel::connectFailed()
+void ProactorChannel::connectFailed()
 {
     loop->assertInLoopThread();
     Channel::disableAll();
 }
 
-void SocketChannel::handleRead(const base::Buf &buf)
+void ProactorChannel::handleRead(const base::Buf &buf)
 {
     loop->assertInLoopThread();
 
@@ -63,25 +63,18 @@ void SocketChannel::handleRead(const base::Buf &buf)
     }
 }
 
-void SocketChannel::handleWrite(const base::Buf &buf)
+void ProactorChannel::handleWrite(const base::Buf &buf)
 {
     runSend(buf);
 }
 
-bool SocketChannel::send(const base::Buf &buf)
+bool ProactorChannel::send(const base::Buf &buf)
 {
     runSend(buf);
     return true;
 }
 
-void SocketChannel::sendInLoop(const base::Buf &buf)
-{
-    loop->assertInLoopThread();
-    sendBuffer.append(buf.buf, buf.len);
-    enableWriting();
-}
-
-void SocketChannel::forceCloseInLoop()
+void ProactorChannel::forceCloseInLoop()
 {
     loop->assertInLoopThread();
     DLOG_TRACE;
@@ -98,13 +91,13 @@ void SocketChannel::forceCloseInLoop()
     tie.reset();
 }
 
-void SocketChannel::runSend(const base::Buf &buf)
+void ProactorChannel::runSend(const base::Buf &buf)
 {
     loop->runInLoop([_this = shared_from_this(), buf] { _this->sendInLoop(buf); });
     DLOG_TRACE;
 }
 
-void SocketChannel::sendByteNum(char *buf, size_t num)
+void ProactorChannel::sendByteNum(char *buf, size_t num)
 {
     loop->assertInLoopThread();
     sendBuffer.retrieveAsString(num);
@@ -117,7 +110,7 @@ void SocketChannel::sendByteNum(char *buf, size_t num)
         postWrite();
     }
 }
-void SocketChannel::recvByteNum(char *buf, size_t num)
+void ProactorChannel::recvByteNum(char *buf, size_t num)
 {
     if (num == 0)
     {
@@ -128,7 +121,7 @@ void SocketChannel::recvByteNum(char *buf, size_t num)
     messageCallback(base::Buf{buf, num});
 }
 
-void SocketChannel::update(int oldflag)
+void ProactorChannel::update(int oldflag)
 {
     if ((oldflag & kReadEvent) == 0 && (flags & kReadEvent) != 0)
     {
@@ -141,15 +134,15 @@ void SocketChannel::update(int oldflag)
     loop->getFdEventManager().change(fd);
 }
 
-void SocketChannel::handleRead() {}
+void ProactorChannel::handleRead() {}
 
-void SocketChannel::postRead()
+void ProactorChannel::postRead()
 {
     std::error_condition condition;
     fd.read({buffer.get(), bufferSize}, condition);
 }
 
-void SocketChannel::postWrite()
+void ProactorChannel::postWrite()
 {
     base::Buf buf(const_cast<char *>(sendBuffer.data()), sendBuffer.size());
     std::error_condition ec;

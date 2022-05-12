@@ -52,12 +52,13 @@ public:
 private:
     void onConnection(const TCPConnectionPtr &conn);
 
-    void onMessage(const TCPConnectionPtr &conn, const Buf &buf)
+    void onMessage(const TCPConnectionPtr &conn, Buffer *buf)
     {
         ++messagesRead_;
-        bytesRead_ += buf.len;
-        bytesWritten_ += buf.len;
-        conn->send(buf);
+        bytesRead_ += buf->size();
+        bytesWritten_ += buf->size();
+        conn->send({const_cast<char *>(buf->data()), buf->size()});
+        buf->retrieveAll();
     }
 
     TCPClient client_;

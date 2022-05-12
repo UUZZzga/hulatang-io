@@ -7,6 +7,7 @@
 #include "hulatang/base/error/ErrorCode.hpp"
 #include "hulatang/base/extend/Defer.hpp"
 
+#include <WinSock2.h>
 #include <system_error>
 #include <variant>
 #include <cassert>
@@ -182,7 +183,7 @@ int64_t lseek(fd_t fd, int64_t offset, int whence, std::error_code &ec) noexcept
 void bind(fd_t fd, sockaddr *addr, size_t len, std::error_code &ec) noexcept
 {
     assert(fd & socketFlag);
-    fd  = fd & (~socketFlag);
+    fd = fd & (~socketFlag);
 
     if (addr != nullptr)
     {
@@ -202,6 +203,12 @@ void listen(fd_t fd, std::error_code &ec)
     {
         fd = fd & (~socketFlag);
         if (0 != ::listen(fd, SOMAXCONN))
+        {
+            ec = make_win32_error_code(WSAGetLastError());
+        }
+
+        u_long ul = 1;
+        if (SOCKET_ERROR == ::ioctlsocket(fd, FIONBIO, &ul))
         {
             ec = make_win32_error_code(WSAGetLastError());
         }
@@ -349,8 +356,16 @@ void close(fd_t fd) noexcept
 namespace hulatang::base {
 FileDescriptor::FileDescriptor() = default;
 
-FileDescriptor::~FileDescriptor() noexcept {
-    if (impl) {
+FileDescriptor::FileDescriptor(socket::fd_t fd)
+    : impl(std::make_unique<Impl>())
+{
+    impl->fd = fd;
+}
+
+FileDescriptor::~FileDescriptor() noexcept
+{
+    if (impl)
+    {
         close();
     }
 }
@@ -429,6 +444,13 @@ void FileDescriptor::socket(sockaddr *addr, size_t len)
     {
         return;
     }
+
+    u_long ul = 1;
+    if (SOCKET_ERROR == ::ioctlsocket(fd, FIONBIO, &ul))
+    {
+        return;
+    }
+
     assert((fd & socketFlag) == 0);
     fd = fd | socketFlag;
     impl = std::make_unique<Impl>();
@@ -483,21 +505,21 @@ void FileDescriptor::connect(sockaddr *addr, size_t len, std::error_condition &c
 {
     assert(impl);
 
-    std::error_code ec;
-    impl::connect(impl->fd, addr, len, impl->recvData, ec);
-    if (!ec)
-    {
-        return;
-    }
+    // std::error_code ec;
+    // impl::connect(impl->fd, addr, len, impl->recvData, ec);
+    // if (!ec)
+    // {
+    //     return;
+    // }
 
-    // 处理错误
-    if (ec.category() == win32_category() && ERROR_IO_PENDING == ec.value())
-    {
-        condition = make_file_error_condition(FileErrorCode::CONNECTING);
-        return;
-    }
-    HLT_CORE_WARN("error code: {}, message: {}", ec.value(), ec.message());
-    impl->recvData.operationType = Type::NONE;
+    // // 处理错误
+    // if (ec.category() == win32_category() && ERROR_IO_PENDING == ec.value())
+    // {
+    //     condition = make_file_error_condition(FileErrorCode::CONNECTING);
+    //     return;
+    // }
+    // HLT_CORE_WARN("error code: {}, message: {}", ec.value(), ec.message());
+    // impl->recvData.operationType = Type::NONE;
 }
 
 void FileDescriptor::read(const Buf &buf, std::error_condition &condition) noexcept
@@ -520,7 +542,7 @@ void FileDescriptor::read(const Buf &buf, std::error_condition &condition) noexc
         case WSAECONNABORTED: {
             // 收到FIN后读取
             // unix下是read返回0
-            // 
+            //
             // 读取的流程是
             // 先判断 num == 0 关闭连接
             // FileDescriptor::read 也就是本函数
@@ -559,7 +581,7 @@ void FileDescriptor::write(const Buf &buf, std::error_condition &condition) noex
         case WSAECONNABORTED:
             // 接收方从不确认（ACK）在数据流套接字上发送的数据
             // 也就是超时
-            // 
+            //
             // 此时不能写入、不能读取
             // 最好的办法是尽快关闭
         case WSAECONNRESET: {

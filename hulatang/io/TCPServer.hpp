@@ -1,10 +1,14 @@
 #ifndef HULATANG_IO_TCPSERVER_HPP
 #define HULATANG_IO_TCPSERVER_HPP
 
+#include "hulatang/base/Buffer.hpp"
 #include "hulatang/base/File.hpp"
 #include "hulatang/io/Acceptor.hpp"
+#include "hulatang/io/Channel.hpp"
 #include "hulatang/io/EventLoopThreadPool.hpp"
-#include "hulatang/io/TcpConnection.hpp"
+#include "hulatang/io/TCPConnection.hpp"
+#include "hulatang/io/InetAddress.hpp"
+
 #include <functional>
 #include <memory>
 #include <string_view>
@@ -16,7 +20,7 @@ class TCPServer
 {
 public:
     using ConnectionCallback = std::function<void(const TCPConnectionPtr &)>;
-    using MessageCallback = std::function<void(const TCPConnectionPtr &, const base::Buf &)>;
+    using MessageCallback = std::function<void(const TCPConnectionPtr &, base::Buffer *)>;
 
     TCPServer(EventLoop *_loop, std::string_view listenAddr, uint16_t port);
 
@@ -35,7 +39,7 @@ public:
     void start();
 
 private:
-    void newConnection(base::FileDescriptor fd, FdEventWatcherPtr watcher, InetAddress addr);
+    void newConnection(std::unique_ptr<Channel> channel, InetAddress addr);
 
     void removeConnection(const TCPConnectionPtr &conn);
 
