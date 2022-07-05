@@ -6,7 +6,7 @@
 
 namespace hulatang::io {
 std::unique_ptr<Model> SocketModelFactory::create(
-    base::Buffer *recvBuf, base::Buffer *sendBuf, MessageCallback messageCallback, WriteCallback writeCallback)
+    Channel *channel, base::Buffer *recvBuf, base::Buffer *sendBuf, MessageCallback messageCallback, WriteCallback writeCallback)
 {
     auto result = std::make_unique<UnixReactor>(recvBuf, sendBuf);
     result->setMessageCallback(messageCallback);
@@ -33,9 +33,21 @@ void UnixReactor::handleRead(Channel *channel)
 
     if (read_num < 0)
     {
-        // TODO error
-        // channel->handleError();
-        return;
+        int err = errno;
+        if (err == EAGAIN)
+        {
+            return;
+        }
+        if (err == ECONNRESET || err == EPIPE)
+        {
+            channel->handleClose();
+        }
+        else
+        {
+            auto ec = std::error_condition{err, std::system_category()};
+            channel->handleError(ec);
+            channel->handleClose();
+        }
     }
     if (read_num == 0)
     {
@@ -56,16 +68,29 @@ void UnixReactor::handleRead(Channel *channel)
 
 void UnixReactor::handleWrite(Channel *channel)
 {
-    auto num = write(channel->getFd().getFd(), writeBuf->data(), writeBuf->size());
-    if (writeCallback)
+    auto num = ::write(channel->getFd().getFd(), writeBuf->data(), writeBuf->size());
+    if (num < 0)
+    {
+        int err = errno;
+        if (err == EAGAIN)
+        {
+            return;
+        }
+        if (err == ECONNRESET || err == EPIPE)
+        {
+            channel->handleClose();
+        }
+        else
+        {
+            auto ec = std::error_condition{err, std::system_category()};
+            channel->handleError(ec);
+            channel->handleClose();
+        }
+    }
+    else if (writeCallback)
     {
         writeCallback(writeBuf->data(), num);
     }
     writeBuf->retrieve(num);
-
-    // if (writeBuf->readableBytes() == 0)
-    // {
-    //     channel->disableWriting();
-    // }
 }
 } // namespace hulatang::io

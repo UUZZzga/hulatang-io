@@ -35,14 +35,6 @@ std::unique_ptr<FdEventManager> FdEventManager::create(EventLoop *loop)
     return std::make_unique<IOCPFdEventManager>(loop);
 }
 
-using base::FileErrorCode;
-using base::make_file_error_condition;
-using base::Type::CLOSE;
-using base::Type::NONE;
-using base::Type::OPEN;
-using base::Type::READ;
-using base::Type::WRITE;
-
 IOCPFdEventManager::IOCPFdEventManager(EventLoop *loop)
     : FdEventManager(loop)
     , iocpHandle(CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 0))

@@ -32,6 +32,7 @@ local win32_sources = {
 }
 
 local linux_sources = {
+    "Proactor.cpp",
     "Reactor.cpp",
 
     "accept/PosixAcceptor.cpp",

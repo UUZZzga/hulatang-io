@@ -42,7 +42,9 @@ Connector::~Connector() = default;
 
 void Connector::start()
 {
-    loop->runInLoop([_this = shared_from_this()] { _this->startInLoop(); });
+    loop->runInLoop([_this = shared_from_this()] {
+        _this->startInLoop();
+    });
 }
 
 void Connector::stop() {}
@@ -65,6 +67,9 @@ void Connector::connect()
         fd.bind(&addr, address.sockaddrLength());
 #endif
         channel = std::make_unique<Channel>(loop, std::move(fd));
+        channel->setErrorCallback([_this = shared_from_this()](const auto &ec) { _this->handleError(ec); });
+        channel->setWriteCallback([_this = shared_from_this()] { _this->connected(); });
+
         loop->getFdEventManager().add(channel.get());
     }
 
@@ -80,7 +85,9 @@ void Connector::connect()
     // assert(ec.category() == base::file_category());
     // if (base::FileErrorCode::CONNECTING == ec.value())
     // {
-    connecting();
+    if (model != nullptr) {
+        connecting();
+    }
     // }
     // else if (base::FileErrorCode::DEADLINE_EXCEEDED == ec.value())
     // {
@@ -97,8 +104,6 @@ void Connector::connecting()
 {
     state = State::Connecting;
     channel->setHandlerCallback([_this = shared_from_this()](Channel *channel) { _this->model->handleEvent(channel); });
-    channel->setWriteCallback([_this = shared_from_this()] { _this->connected(); });
-    channel->setErrorCallback([_this = shared_from_this()](const auto &ec) { _this->handleError(ec); });
 }
 
 void Connector::connected()

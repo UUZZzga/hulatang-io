@@ -41,10 +41,12 @@ void TCPConnection::send(const base::Buf &buf)
 
 void TCPConnection::shutdown()
 {
-    loop->queueInLoop([_this = shared_from_this()] { _this->closeCallback(_this); });
+    loop->queueInLoop([this] { closeCallback(shared_from_this()); });
 }
 
-void TCPConnection::forceClose() {}
+void TCPConnection::forceClose() {
+    loop->queueInLoop([this] { closeCallback(shared_from_this()); });
+}
 
 void TCPConnection::connectEstablished()
 {

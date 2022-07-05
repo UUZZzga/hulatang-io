@@ -38,6 +38,15 @@ std::string sock_ntop(const sockaddr *sa, size_t len)
         return "unspecified";
     }
     break;
+#if HLT_PLATFORM_WINDOWS
+    default: {
+        DWORD str_len = buf.size();
+        if (WSAAddressToString(const_cast<sockaddr *>(sa), len, nullptr, buf.data(), &str_len) == SOCKET_ERROR) {
+            return {};
+        }
+        return {buf.data(), str_len};
+    }
+#else
     case AF_INET: {
         const auto *sin = reinterpret_cast<const sockaddr_in *>(sa);
         if (inet_ntop(AF_INET, &sin->sin_addr, buf.data(), buf.size()) == nullptr)
@@ -60,6 +69,7 @@ std::string sock_ntop(const sockaddr *sa, size_t len)
         {
             return fmt::format("[{}]:{}", buf.data(), ntohs(sin6->sin6_port));
         }
+#endif
     }
     throw std::invalid_argument("Invalid sa_family");
 }

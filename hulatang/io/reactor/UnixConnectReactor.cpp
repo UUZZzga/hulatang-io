@@ -4,12 +4,28 @@
 #include "hulatang/io/SocketModelFactory.hpp"
 
 #include <cstdlib>
+#include <system_error>
+
+#include <sys/socket.h>
 #include <sys/uio.h>
 #include <unistd.h>
 
 namespace hulatang::io {
-std::unique_ptr<Model> SocketModelFactory::createConnect(Channel *channel, , sockaddr *addr, size_t addrLen)
+std::unique_ptr<Model> SocketModelFactory::createConnect(Channel *channel, sockaddr *addr, size_t addrLen)
 {
+    auto i = ::connect(channel->getFd().getFd(), addr, addrLen);
+    if (i < 0)
+    {
+        int err = errno;
+        if (err != EINPROGRESS) {
+            auto ec = std::error_condition{err, std::system_category()};
+            channel->handleError(ec);
+            return nullptr;
+        }
+    }
+
+    channel->enableWriting();
+    channel->getLoop()->getFdEventManager().update(channel);
     return std::make_unique<UnixConnectReactor>();
 }
 

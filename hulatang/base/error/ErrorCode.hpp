@@ -9,11 +9,13 @@ namespace hulatang {
 class win32_error_category : public std::error_category
 { // categorize an operating system error
 public:
+#if HLT_COMPILER_MSVC
     // 77696E00 ASCII is win
     constexpr static uintptr_t WIN32_ERROR_ADDR = 0x77696E00;
     constexpr win32_error_category() noexcept
         : error_category(WIN32_ERROR_ADDR)
     {}
+#endif
 
     [[nodiscard]] const char *name() const noexcept override
     {
@@ -39,13 +41,11 @@ public:
     }
 };
 
-#if defined(_MSC_VER)
 [[nodiscard]] inline const std::error_category &win32_category() noexcept
 {
     static win32_error_category category;
     return category;
 }
-#endif
 
 [[nodiscard]] inline std::system_error make_win32_system_error(int error_code) noexcept
 {

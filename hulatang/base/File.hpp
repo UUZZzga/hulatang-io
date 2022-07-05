@@ -113,14 +113,14 @@ enum FileErrorCode : int
 class FileDescriptor::ErrorCategory : public std::error_category
 {
 public:
-#if HLT_PLATFORM_WINDOWS
+#if HLT_COMPILER_MSVC
     // 66696C65 ASCII is file
     constexpr static uintptr_t FILE_ERROR_ADDR = 0x66696C65;
     constexpr ErrorCategory() noexcept
         : error_category(FILE_ERROR_ADDR)
     {}
 #else
-    constexpr ErrorCategory() noexcept = default;
+    ErrorCategory() noexcept = default;
 #endif
 
     [[nodiscard]] const char *name() const noexcept override

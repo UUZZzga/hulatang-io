@@ -6,6 +6,7 @@
 #include "hulatang/base/Log.hpp"
 #include "hulatang/base/extend/Defer.hpp"
 #include <asm-generic/errno.h>
+#include <exception>
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -126,7 +127,19 @@ int64_t FileDescriptor::lseek(int64_t offset, int whence, std::error_condition &
 void FileDescriptor::socket(sockaddr *addr, size_t len)
 {
     assert(!impl);
-    int sockfd = ::socket(addr->sa_family, SOCK_STREAM, IPPROTO_TCP);
+    // int sockfd = ::socket(addr->sa_family, SOCK_STREAM, IPPROTO_TCP);
+    // if (sockfd < 0)
+    // {
+    //     abort();
+    // }
+    // {
+    //     int val = fcntl(sockfd, F_GETFL);
+    //     val |= O_NONBLOCK | O_CLOEXEC;
+    //     if (fcntl(sockfd, F_SETFD, val) < 0) {
+    //         abort();
+    //     }
+    // }
+    int sockfd = ::socket(addr->sa_family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP);
     if (sockfd < 0)
     {
         abort();
@@ -137,11 +150,6 @@ void FileDescriptor::socket(sockaddr *addr, size_t len)
         setsockopt(sockfd, SOL_SOCKET, SO_NOSIGPIPE, &on, sizeof(on));
     }
 #endif
-    {
-        int val = fcntl(sockfd, F_GETFL);
-        val |= O_NONBLOCK | O_CLOEXEC;
-        fcntl(sockfd, F_SETFD, val);
-    }
     impl = std::make_unique<Impl>(Impl{});
     impl->fd = sockfd;
 }

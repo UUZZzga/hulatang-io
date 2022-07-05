@@ -16,7 +16,7 @@
 namespace hulatang::io {
 LinuxFdEventManager::LinuxFdEventManager(EventLoop *loop)
     : FdEventManager(loop)
-    , eventFd(eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC))
+    , channel(std::make_unique<Channel>(loop, base::FileDescriptor{::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC)}))
     , processing(false)
 {}
 
@@ -27,7 +27,6 @@ LinuxFdEventManager::~LinuxFdEventManager()
 
 void LinuxFdEventManager::init()
 {
-    channel = std::make_unique<Channel>(loop, std::move(eventFd));
     channel->setHandlerCallback([](Channel *channel) {
         if ((channel->getREvent() & POLLIN) != 0)
         {
@@ -43,7 +42,7 @@ void LinuxFdEventManager::wakeup()
 {
     if (processing)
     {
-        eventfd_write(eventFd.getFd(), 0);
+        eventfd_write(channel->getFd().getFd(), 0);
     }
 }
 } // namespace hulatang::io

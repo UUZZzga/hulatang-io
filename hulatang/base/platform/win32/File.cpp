@@ -31,82 +31,82 @@ using hulatang::base::FdNull;
 using hulatang::base::IO_DATA;
 using hulatang::base::sockaddr_u;
 
-sockaddr_u getSockaddr(std::string_view host, int port, std::error_code &ec)
-{
-    sockaddr_u sa{};
+// sockaddr_u getSockaddr(std::string_view host, int port, std::error_code &ec)
+// {
+//     sockaddr_u sa{};
 
-    auto &sin = sa.sin;
-    if (host.empty())
-    {
-        sin.sin_family = AF_INET;
-        sin.sin_addr.s_addr = htonl(INADDR_ANY);
-    }
-    else
-    {
-#ifdef ENABLE_IPV6
-        auto &sin6 = sa.sin6;
-#endif
+//     auto &sin = sa.sin;
+//     if (host.empty())
+//     {
+//         sin.sin_family = AF_INET;
+//         sin.sin_addr.s_addr = htonl(INADDR_ANY);
+//     }
+//     else
+//     {
+// #ifdef ENABLE_IPV6
+//         auto &sin6 = sa.sin6;
+// #endif
 
-        if (inet_pton(AF_INET, host.data(), &sin.sin_addr) == 1)
-        {
-            sin.sin_family = AF_INET;
-        }
-#ifdef ENABLE_IPV6
-        else if (inet_pton(AF_INET6, host, &sin6.sin6_addr) == 1)
-        {
-            sin6.sin6_family = AF_INET6;
-        }
-#endif
-        else
-        {
-            struct addrinfo *answer = nullptr;
-            struct addrinfo hint
-            {
-                .ai_flags = AI_ALL, .ai_family = AF_UNSPEC, .ai_socktype = SOCK_STREAM, .ai_protocol = IPPROTO_TCP
-            };
+//         if (inet_pton(AF_INET, host.data(), &sin.sin_addr) == 1)
+//         {
+//             sin.sin_family = AF_INET;
+//         }
+// #ifdef ENABLE_IPV6
+//         else if (inet_pton(AF_INET6, host, &sin6.sin6_addr) == 1)
+//         {
+//             sin6.sin6_family = AF_INET6;
+//         }
+// #endif
+//         else
+//         {
+//             struct addrinfo *answer = nullptr;
+//             struct addrinfo hint
+//             {
+//                 .ai_flags = AI_ALL, .ai_family = AF_UNSPEC, .ai_socktype = SOCK_STREAM, .ai_protocol = IPPROTO_TCP
+//             };
 
-            if (getaddrinfo(host.data(), nullptr, &hint, &answer) != 0)
-            {
-                ec = make_win32_error_code(WSAGetLastError());
-                return {};
-            }
+//             if (getaddrinfo(host.data(), nullptr, &hint, &answer) != 0)
+//             {
+//                 ec = make_win32_error_code(WSAGetLastError());
+//                 return {};
+//             }
 
-            for (auto *it = answer; it != nullptr; it = it->ai_next)
-            {
-                switch (it->ai_family)
-                {
-                case AF_INET: {
-                    auto *ipv4 = reinterpret_cast<struct sockaddr_in *>(it->ai_addr);
-                    sin = *ipv4;
-                    break;
-                }
-#ifdef ENABLE_IPV6
-                case AF_INET6: {
-                    auto *ipv6 = reinterpret_cast<struct sockaddr_in6 *>(it->ai_addr);
-                    sin6 = *ipv6;
-                    break;
-                }
-#endif
-                }
-            }
-        }
-    }
+//             for (auto *it = answer; it != nullptr; it = it->ai_next)
+//             {
+//                 switch (it->ai_family)
+//                 {
+//                 case AF_INET: {
+//                     auto *ipv4 = reinterpret_cast<struct sockaddr_in *>(it->ai_addr);
+//                     sin = *ipv4;
+//                     break;
+//                 }
+// #ifdef ENABLE_IPV6
+//                 case AF_INET6: {
+//                     auto *ipv6 = reinterpret_cast<struct sockaddr_in6 *>(it->ai_addr);
+//                     sin6 = *ipv6;
+//                     break;
+//                 }
+// #endif
+//                 }
+//             }
+//         }
+//     }
 
-    if (sa.sa.sa_family == AF_INET)
-    {
-        sa.sin.sin_port = htons(port);
-    }
-    else if (sa.sa.sa_family == AF_INET6)
-    {
-        sa.sin6.sin6_port = htons(port);
-    }
-    else
-    {
-        return {};
-    }
+//     if (sa.sa.sa_family == AF_INET)
+//     {
+//         sa.sin.sin_port = htons(port);
+//     }
+//     else if (sa.sa.sa_family == AF_INET6)
+//     {
+//         sa.sin6.sin6_port = htons(port);
+//     }
+//     else
+//     {
+//         return {};
+//     }
 
-    return sa;
-}
+//     return sa;
+// }
 
 inline DWORD buildAccess(OFlag oflag)
 {
@@ -199,90 +199,30 @@ void bind(fd_t fd, sockaddr *addr, size_t len, std::error_code &ec) noexcept
 
 void listen(fd_t fd, std::error_code &ec)
 {
-    if ((fd & socketFlag) != 0U)
+    assert(fd & socketFlag);
+    fd = fd & (~socketFlag);
+    if (0 != ::listen(fd, SOMAXCONN))
     {
-        fd = fd & (~socketFlag);
-        if (0 != ::listen(fd, SOMAXCONN))
-        {
-            ec = make_win32_error_code(WSAGetLastError());
-        }
-
-        u_long ul = 1;
-        if (SOCKET_ERROR == ::ioctlsocket(fd, FIONBIO, &ul))
-        {
-            ec = make_win32_error_code(WSAGetLastError());
-        }
+        ec = make_win32_error_code(WSAGetLastError());
     }
-    else
+
+    u_long ul = 1;
+    if (SOCKET_ERROR == ::ioctlsocket(fd, FIONBIO, &ul))
     {
-        abort();
+        ec = make_win32_error_code(WSAGetLastError());
     }
 }
 
 void accept(fd_t listen, fd_t &accept, int af, char *buf, IO_DATA &data, std::error_code &ec)
 {
-    if ((listen & socketFlag) != 0U)
-    {
-        DWORD dwBytes = 0;
-        listen = listen & (~socketFlag);
-        accept = WSASocketW(af, SOCK_STREAM, IPPROTO_TCP, nullptr, 0, WSA_FLAG_OVERLAPPED);
-        if (INVALID_SOCKET == accept)
-        {
-            ec = make_win32_error_code(WSAGetLastError());
-            return;
-        }
-        if (AcceptEx(listen, accept, buf, 0, addrLen, addrLen, &dwBytes, &data.overlapped) == FALSE)
-        {
-            ec = make_win32_error_code(WSAGetLastError());
-        }
-        data.operationType = hulatang::base::Type::READ;
-        accept |= socketFlag;
-    }
-    else
-    {
-        abort();
-    }
 }
 
 void connect(fd_t fd, sockaddr *addr, size_t len, IO_DATA &data, std::error_code &ec) noexcept
 {
-    assert(INVALID_SOCKET != fd);
-    assert(fd & socketFlag);
-    fd = fd & (~socketFlag);
-
-    LPFN_CONNECTEX ConnectEx = nullptr;
-    DWORD dwBytes = 0;
-    GUID guidConnectEx = WSAID_CONNECTEX;
-    if (SOCKET_ERROR == WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &guidConnectEx, sizeof(guidConnectEx), &ConnectEx,
-                            sizeof(ConnectEx), &dwBytes, nullptr, nullptr))
-    {
-        ec = make_win32_error_code(WSAGetLastError());
-        return;
-    }
-
-    if (ConnectEx(fd, addr, static_cast<int>(len), nullptr, 0, nullptr, &data.overlapped) == FALSE)
-    {
-        ec = make_win32_error_code(WSAGetLastError());
-    }
-    data.operationType = hulatang::base::Type::OPEN;
 }
 
 void read(fd_t fd, const Buf &buf, IO_DATA &data, std::error_code &ec) noexcept
 {
-    if ((fd & socketFlag) != 0U)
-    {
-        fd = fd & (~socketFlag);
-
-        WSABUF wsabuf{.len = static_cast<ULONG>(buf.len), .buf = buf.buf};
-        data.buf = buf;
-        DWORD flags = 0;
-        if (SOCKET_ERROR == WSARecv(fd, &wsabuf, 1, nullptr, &flags, &data.overlapped, nullptr))
-        {
-            ec = make_win32_error_code(WSAGetLastError());
-        }
-    }
-    else
-    {
         LARGE_INTEGER fileSize;
         LARGE_INTEGER filePointer;
         data.buf = buf;
@@ -309,33 +249,16 @@ void read(fd_t fd, const Buf &buf, IO_DATA &data, std::error_code &ec) noexcept
         {
             ec = make_win32_error_code(GetLastError());
         }
-    }
     data.operationType = hulatang::base::Type::READ;
 }
 
 void write(fd_t fd, const Buf &buf, IO_DATA &data, std::error_code &ec) noexcept
 {
-    if ((fd & socketFlag) != 0U)
+    data.buf = buf;
+    BOOL bRet = ::WriteFile(reinterpret_cast<HANDLE>(fd), buf.buf, static_cast<DWORD>(buf.len), nullptr, &data.overlapped);
+    if (bRet == 0)
     {
-        fd = fd & (~socketFlag);
-
-        WSABUF wsabuf{.len = static_cast<ULONG>(buf.len), .buf = buf.buf};
-        DWORD flags = 0;
-        data.buf = buf;
-
-        if (SOCKET_ERROR == WSASend(fd, &wsabuf, 1, nullptr, flags, &data.overlapped, nullptr))
-        {
-            ec = make_win32_error_code(WSAGetLastError());
-        }
-    }
-    else
-    {
-        data.buf = buf;
-        BOOL bRet = ::WriteFile(reinterpret_cast<HANDLE>(fd), buf.buf, static_cast<DWORD>(buf.len), nullptr, &data.overlapped);
-        if (bRet == 0)
-        {
-            ec = make_win32_error_code(GetLastError());
-        }
+        ec = make_win32_error_code(GetLastError());
     }
     data.operationType = hulatang::base::Type::WRITE;
 }
@@ -598,16 +521,16 @@ void FileDescriptor::write(const Buf &buf, std::error_condition &condition) noex
 void FileDescriptor::close() noexcept
 {
     assert(impl);
-    if (impl->recvData.operationType != Type::NONE)
-    {
-        CancelIoEx(reinterpret_cast<HANDLE>(impl->fd), &(impl->recvData.overlapped));
-        impl->recvData.operationType = Type::NONE;
-    }
-    if (impl->sendData.operationType != Type::NONE)
-    {
-        CancelIoEx(reinterpret_cast<HANDLE>(impl->fd), &(impl->sendData.overlapped));
-        impl->sendData.operationType = Type::NONE;
-    }
+    // if (impl->recvData.operationType != Type::NONE)
+    // {
+    //     CancelIoEx(reinterpret_cast<HANDLE>(impl->fd), &(impl->recvData.overlapped));
+    //     impl->recvData.operationType = Type::NONE;
+    // }
+    // if (impl->sendData.operationType != Type::NONE)
+    // {
+    //     CancelIoEx(reinterpret_cast<HANDLE>(impl->fd), &(impl->sendData.overlapped));
+    //     impl->sendData.operationType = Type::NONE;
+    // }
 
     impl::close(impl->fd);
     impl.reset();

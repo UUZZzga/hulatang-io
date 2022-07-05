@@ -1,6 +1,6 @@
 add_rules("mode.debug", "mode.release", "mode.releasedbg", "mode.profile", "mode.check")
 
-set_languages("c++20")
+set_languages("c99", "c++20")
 
 -- 关闭打印所有日志
 option("disable_logging")
@@ -117,9 +117,9 @@ target("config")
     add_configfiles("hulatang/base/Config.h.in")
 
 includes("hulatang/base")
-includes("hulatang/file")
+-- includes("hulatang/file")
 includes("hulatang/http")
 includes("hulatang/io")
-includes("hulatang/ssl")
+-- includes("hulatang/ssl")
 
 includes("examples")

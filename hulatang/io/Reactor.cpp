@@ -4,7 +4,7 @@
 #include <sys/socket.h>
 
 static_assert(EPOLLIN == POLLIN);
-static_assert(EPOLLOUT == EPOLLOUT);
+static_assert(EPOLLOUT == POLLOUT);
 
 namespace hulatang::io {
 void Reactor::handleEvent(Channel *channel)

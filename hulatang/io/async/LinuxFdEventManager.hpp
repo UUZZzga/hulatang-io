@@ -31,7 +31,6 @@ protected:
     }
 
 private:
-    base::FileDescriptor eventFd;
     std::unique_ptr<Channel> channel;
     std::atomic<bool> processing;
 };
