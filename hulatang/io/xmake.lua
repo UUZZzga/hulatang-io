@@ -62,5 +62,5 @@ target("hulatang_io")
         add_files(src)
     end
 
-includes("extend")
+-- includes("extend")
 includes("tests")
